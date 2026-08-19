@@ -38,7 +38,7 @@
 
     <section class="toolbar">
       <div class="search-wrap">
-        <input id="searchInput" type="search" placeholder="Search customer, contact, quote/order, notes…" autocomplete="off">
+        <input id="searchInput" type="search" placeholder="Search customer, contact, interest, quote/order, notes…" autocomplete="off">
       </div>
       <select id="statusFilter" aria-label="Filter by status">
         <option value="all">All active statuses</option>
@@ -114,8 +114,8 @@
         <label>Next follow-up
           <input id="nextFollowUp" type="date">
         </label>
-        <label class="span-2">Next action
-          <input id="nextAction" maxlength="500" placeholder="Call for decision, check ETA, finish quote…">
+        <label class="span-2">Initial Interest
+          <input id="nextAction" maxlength="500" placeholder="What were they originally asking about?">
         </label>
         <label class="span-2">Notes
           <textarea id="notes" rows="4" maxlength="5000"></textarea>
@@ -154,6 +154,11 @@
             <div class="eyebrow">Activity</div>
             <h3>Log interaction</h3>
           </div>
+        </div>
+
+        <div class="next-action" id="interactionInterestWrap">
+          <strong>Initial Interest</strong>
+          <span id="interactionInterest"></span>
         </div>
 
         <form id="interactionForm" class="interaction-form">
