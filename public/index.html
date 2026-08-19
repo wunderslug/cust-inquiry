@@ -8,183 +8,242 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
+  <section class="auth-screen" id="authScreen">
+    <form class="auth-card" id="authForm">
       <div class="eyebrow">Customer Desk</div>
-      <h1>Lumber Yard Mini CRM</h1>
-    </div>
-    <button class="primary" id="addCustomerBtn">+ New customer</button>
-  </header>
+      <h1 id="authTitle">Sign in</h1>
+      <p id="authSubtitle">Use your account to open your customer list.</p>
 
-  <main class="shell">
-    <section class="stats" aria-label="Dashboard">
-      <button class="stat-card" data-filter="all">
-        <span class="stat-label">Open</span>
-        <strong id="statOpen">0</strong>
-      </button>
-      <button class="stat-card attention" data-filter="due">
-        <span class="stat-label">Follow-ups due</span>
-        <strong id="statDue">0</strong>
-      </button>
-      <button class="stat-card" data-filter="Waiting on Customer">
-        <span class="stat-label">Waiting on customer</span>
-        <strong id="statCustomer">0</strong>
-      </button>
-      <button class="stat-card" data-filter="Waiting on Vendor">
-        <span class="stat-label">Waiting on vendor</span>
-        <strong id="statVendor">0</strong>
-      </button>
-    </section>
+      <label class="hidden" id="displayNameWrap">Display name
+        <input id="authDisplayName" maxlength="80" autocomplete="name">
+      </label>
+      <label>Username
+        <input id="authUsername" maxlength="50" autocomplete="username" required>
+      </label>
+      <label>Password
+        <input id="authPassword" type="password" minlength="8" autocomplete="current-password" required>
+      </label>
 
-    <section class="toolbar">
-      <div class="search-wrap">
-        <input id="searchInput" type="search" placeholder="Search customer, contact, interest, quote/order, notes…" autocomplete="off">
-      </div>
-      <select id="statusFilter" aria-label="Filter by status">
-        <option value="all">All active statuses</option>
-        <option>New Inquiry</option>
-        <option>Quote Needed</option>
-        <option>Quote Sent</option>
-        <option>Waiting on Customer</option>
-        <option>Ordered</option>
-        <option>Waiting on Vendor</option>
-        <option>Ready</option>
-        <option>Complete</option>
-        <option>Lost / Cancelled</option>
-      </select>
-      <button class="secondary" id="clearFilterBtn">Clear</button>
-      <a class="secondary link-button" href="/api/backup">Backup JSON</a>
-    </section>
-
-    <div class="section-heading">
-      <div>
-        <div class="eyebrow">Accounts & inquiries</div>
-        <h2 id="resultTitle">Active customers</h2>
-      </div>
-      <div class="small" id="resultCount"></div>
-    </div>
-
-    <section class="cards" id="customerGrid"></section>
-    <section class="empty hidden" id="emptyState">
-      <h3>No customers here yet.</h3>
-      <p>Add the first customer or clear the current filter.</p>
-    </section>
-  </main>
-
-  <dialog id="customerDialog">
-    <form id="customerForm" method="dialog">
-      <div class="modal-head">
-        <div>
-          <div class="eyebrow">Account</div>
-          <h2 id="customerDialogTitle">New customer</h2>
-        </div>
-        <button type="button" class="icon-btn" data-close="customerDialog" aria-label="Close">×</button>
-      </div>
-
-      <input type="hidden" id="customerId">
-      <div class="form-grid">
-        <label class="span-2">Customer / Company
-          <input id="company" required maxlength="160">
-        </label>
-        <label>Contact
-          <input id="contact" maxlength="160">
-        </label>
-        <label>Phone
-          <input id="phone" maxlength="80">
-        </label>
-        <label>Email
-          <input id="email" type="email" maxlength="200">
-        </label>
-        <label>Quote / Order #
-          <input id="quoteOrder" maxlength="120">
-        </label>
-        <label>Status
-          <select id="status">
-            <option>New Inquiry</option>
-            <option>Quote Needed</option>
-            <option>Quote Sent</option>
-            <option>Waiting on Customer</option>
-            <option>Ordered</option>
-            <option>Waiting on Vendor</option>
-            <option>Ready</option>
-            <option>Complete</option>
-            <option>Lost / Cancelled</option>
-          </select>
-        </label>
-        <label>Next follow-up
-          <input id="nextFollowUp" type="date">
-        </label>
-        <label class="span-2">Initial Interest
-          <input id="nextAction" maxlength="500" placeholder="What were they originally asking about?">
-        </label>
-        <label class="span-2">Notes
-          <textarea id="notes" rows="4" maxlength="5000"></textarea>
-        </label>
-      </div>
-
-      <div class="modal-actions">
-        <button type="button" class="danger ghost hidden" id="deleteCustomerBtn">Delete</button>
-        <div class="spacer"></div>
-        <button type="button" class="secondary" data-close="customerDialog">Cancel</button>
-        <button type="submit" class="primary">Save customer</button>
-      </div>
+      <div class="auth-error hidden" id="authError"></div>
+      <button class="primary" type="submit" id="authSubmit">Sign in</button>
     </form>
-  </dialog>
+  </section>
 
-  <dialog id="detailDialog" class="detail-dialog">
-    <div class="detail-wrap">
-      <div class="modal-head">
+  <div id="appRoot" class="hidden">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Customer Desk</div>
+        <h1>Lumber Yard Mini CRM</h1>
+      </div>
+      <div class="topbar-actions">
+        <div class="signed-in">
+          <strong id="currentUserName"></strong>
+          <span id="currentUserRole"></span>
+        </div>
+        <button class="secondary dark-secondary hidden" id="manageUsersBtn">Users</button>
+        <button class="secondary dark-secondary" id="logoutBtn">Sign out</button>
+        <button class="primary" id="addCustomerBtn">+ New customer</button>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="stats" aria-label="Dashboard">
+        <button class="stat-card" data-filter="all">
+          <span class="stat-label">Open</span>
+          <strong id="statOpen">0</strong>
+        </button>
+        <button class="stat-card attention" data-filter="due">
+          <span class="stat-label">Follow-ups due</span>
+          <strong id="statDue">0</strong>
+        </button>
+        <button class="stat-card" data-filter="Waiting on Customer">
+          <span class="stat-label">Waiting on customer</span>
+          <strong id="statCustomer">0</strong>
+        </button>
+        <button class="stat-card" data-filter="Waiting on Vendor">
+          <span class="stat-label">Waiting on vendor</span>
+          <strong id="statVendor">0</strong>
+        </button>
+      </section>
+
+      <section class="toolbar">
+        <div class="search-wrap">
+          <input id="searchInput" type="search" placeholder="Search customer, contact, interest, quote/order, notes…" autocomplete="off">
+        </div>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="all">All active statuses</option>
+          <option>New Inquiry</option>
+          <option>Quote Needed</option>
+          <option>Quote Sent</option>
+          <option>Waiting on Customer</option>
+          <option>Ordered</option>
+          <option>Waiting on Vendor</option>
+          <option>Ready</option>
+          <option>Complete</option>
+          <option>Lost / Cancelled</option>
+        </select>
+        <button class="secondary" id="clearFilterBtn">Clear</button>
+        <a class="secondary link-button" href="/api/backup">Backup JSON</a>
+      </section>
+
+      <div class="section-heading">
         <div>
-          <div class="eyebrow" id="detailStatus">Customer</div>
-          <h2 id="detailCompany"></h2>
-          <div class="detail-contact" id="detailContact"></div>
+          <div class="eyebrow">Accounts & inquiries</div>
+          <h2 id="resultTitle">Active customers</h2>
         </div>
-        <button type="button" class="icon-btn" data-close="detailDialog" aria-label="Close">×</button>
+        <div class="small" id="resultCount"></div>
       </div>
 
-      <div class="detail-summary" id="detailSummary"></div>
+      <section class="cards" id="customerGrid"></section>
+      <section class="empty hidden" id="emptyState">
+        <h3>No customers here yet.</h3>
+        <p>Add the first customer or clear the current filter.</p>
+      </section>
+    </main>
 
-      <div class="detail-actions">
-        <button class="secondary" id="editFromDetailBtn">Edit customer</button>
-      </div>
-
-      <div class="interaction-panel">
-        <div class="section-heading tight">
+    <dialog id="customerDialog">
+      <form id="customerForm" method="dialog">
+        <div class="modal-head">
           <div>
-            <div class="eyebrow">Activity</div>
-            <h3>Log interaction</h3>
+            <div class="eyebrow">Account</div>
+            <h2 id="customerDialogTitle">New customer</h2>
           </div>
+          <button type="button" class="icon-btn" data-close="customerDialog" aria-label="Close">×</button>
         </div>
 
-        <div class="next-action" id="interactionInterestWrap">
-          <strong>Initial Interest</strong>
-          <span id="interactionInterest"></span>
+        <input type="hidden" id="customerId">
+        <div class="form-grid">
+          <label class="span-2">Customer / Company
+            <input id="company" required maxlength="160">
+          </label>
+          <label>Contact
+            <input id="contact" maxlength="160">
+          </label>
+          <label>Phone
+            <input id="phone" maxlength="80">
+          </label>
+          <label>Email
+            <input id="email" type="email" maxlength="200">
+          </label>
+          <label>Quote / Order #
+            <input id="quoteOrder" maxlength="120">
+          </label>
+          <label>Status
+            <select id="status">
+              <option>New Inquiry</option>
+              <option>Quote Needed</option>
+              <option>Quote Sent</option>
+              <option>Waiting on Customer</option>
+              <option>Ordered</option>
+              <option>Waiting on Vendor</option>
+              <option>Ready</option>
+              <option>Complete</option>
+              <option>Lost / Cancelled</option>
+            </select>
+          </label>
+          <label>Next follow-up
+            <input id="nextFollowUp" type="date">
+          </label>
+          <label class="span-2">Initial Interest
+            <input id="nextAction" maxlength="500" placeholder="What were they originally asking about?">
+          </label>
+          <label class="span-2">Notes
+            <textarea id="notes" rows="4" maxlength="5000"></textarea>
+          </label>
         </div>
 
-        <form id="interactionForm" class="interaction-form">
-          <select id="interactionType">
-            <option>Call</option>
-            <option>Email</option>
-            <option>Counter Visit</option>
-            <option>Quote</option>
-            <option>Order</option>
-            <option>Vendor</option>
-            <option>Note</option>
+        <div class="modal-actions">
+          <button type="button" class="danger ghost hidden" id="deleteCustomerBtn">Delete</button>
+          <div class="spacer"></div>
+          <button type="button" class="secondary" data-close="customerDialog">Cancel</button>
+          <button type="submit" class="primary">Save customer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="detailDialog" class="detail-dialog">
+      <div class="detail-wrap">
+        <div class="modal-head">
+          <div>
+            <div class="eyebrow" id="detailStatus">Customer</div>
+            <h2 id="detailCompany"></h2>
+            <div class="detail-contact" id="detailContact"></div>
+          </div>
+          <button type="button" class="icon-btn" data-close="detailDialog" aria-label="Close">×</button>
+        </div>
+
+        <div class="detail-summary" id="detailSummary"></div>
+
+        <div class="detail-actions">
+          <button class="secondary" id="editFromDetailBtn">Edit customer</button>
+        </div>
+
+        <div class="interaction-panel">
+          <div class="section-heading tight">
+            <div>
+              <div class="eyebrow">Activity</div>
+              <h3>Log interaction</h3>
+            </div>
+          </div>
+
+          <div class="next-action" id="interactionInterestWrap">
+            <strong>Initial Interest</strong>
+            <span id="interactionInterest"></span>
+          </div>
+
+          <form id="interactionForm" class="interaction-form">
+            <select id="interactionType">
+              <option>Call</option>
+              <option>Email</option>
+              <option>Counter Visit</option>
+              <option>Quote</option>
+              <option>Order</option>
+              <option>Vendor</option>
+              <option>Note</option>
+            </select>
+            <textarea id="interactionSummary" rows="2" placeholder="What happened?" required maxlength="2000"></textarea>
+            <input id="interactionHappenedAt" class="hidden" type="datetime-local">
+            <button class="primary" type="submit" id="interactionSubmitBtn">Add interaction</button>
+            <button class="secondary hidden" type="button" id="cancelInteractionEdit">Cancel edit</button>
+          </form>
+        </div>
+
+        <div class="timeline-head">
+          <h3>Recent interactions</h3>
+          <span class="small">Showing latest 10; older entries stay stored.</span>
+        </div>
+        <div id="interactionTimeline" class="timeline"></div>
+      </div>
+    </dialog>
+
+    <dialog id="usersDialog" class="users-dialog">
+      <div class="detail-wrap">
+        <div class="modal-head">
+          <div>
+            <div class="eyebrow">Administration</div>
+            <h2>Users</h2>
+          </div>
+          <button type="button" class="icon-btn" data-close="usersDialog" aria-label="Close">×</button>
+        </div>
+
+        <form id="newUserForm" class="user-create-form">
+          <input id="newUserDisplayName" placeholder="Display name" maxlength="80" required>
+          <input id="newUserUsername" placeholder="Username" maxlength="50" required>
+          <input id="newUserPassword" type="password" placeholder="Temporary password" minlength="8" required>
+          <select id="newUserRole">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
           </select>
-          <textarea id="interactionSummary" rows="2" placeholder="What happened?" required maxlength="2000"></textarea>
-          <button class="primary" type="submit">Add interaction</button>
+          <button class="primary" type="submit">Add user</button>
         </form>
-      </div>
 
-      <div class="timeline-head">
-        <h3>Recent interactions</h3>
-        <span class="small">Showing latest 10; older entries stay in JSON.</span>
+        <div class="small user-help">Each user has a separate private customer list. Deleting a user archives that user's customer file.</div>
+        <div id="usersList" class="users-list"></div>
       </div>
-      <div id="interactionTimeline" class="timeline"></div>
-    </div>
-  </dialog>
+    </dialog>
 
-  <div class="toast" id="toast" role="status"></div>
+    <div class="toast" id="toast" role="status"></div>
+  </div>
 
   <script src="/app.js"></script>
 </body>
