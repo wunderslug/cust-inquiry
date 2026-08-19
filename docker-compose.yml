@@ -1,0 +1,11 @@
+services:
+  lumber-crm:
+    build: .
+    container_name: lumber-crm
+    restart: unless-stopped
+    ports:
+      - "3080:3080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=3080
