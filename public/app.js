@@ -3,11 +3,15 @@ const STATUS_CLOSED = new Set(['Complete', 'Lost / Cancelled']);
 const el = id => document.getElementById(id);
 const customerDialog = el('customerDialog');
 const detailDialog = el('detailDialog');
+const usersDialog = el('usersDialog');
+
 let customers = [];
 let selectedCustomerId = null;
 let quickFilter = 'all';
 let editingInteractionId = null;
 let editingInteractionCustomerId = null;
+let currentUser = null;
+let authMode = 'login';
 const expandedGroups = new Set();
 
 function todayLocal() {
@@ -68,8 +72,52 @@ async function api(url, options={}) {
     ...options
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+  if (!res.ok) {
+    if (res.status === 401 && url !== '/api/login') showAuth(false);
+    const err = new Error(data.error || 'Something went wrong.');
+    err.status = res.status;
+    throw err;
+  }
   return data;
+}
+
+function showAuth(setupRequired) {
+  authMode = setupRequired ? 'setup' : 'login';
+  currentUser = null;
+  el('appRoot').classList.add('hidden');
+  el('authScreen').classList.remove('hidden');
+  el('authError').classList.add('hidden');
+  el('authError').textContent = '';
+  el('authForm').reset();
+
+  const setup = authMode === 'setup';
+  el('displayNameWrap').classList.toggle('hidden', !setup);
+  el('authTitle').textContent = setup ? 'Create admin account' : 'Sign in';
+  el('authSubtitle').textContent = setup
+    ? 'This first account will own the customer records already in this app.'
+    : 'Use your account to open your private customer list.';
+  el('authSubmit').textContent = setup ? 'Create account' : 'Sign in';
+  el('authPassword').autocomplete = setup ? 'new-password' : 'current-password';
+  setTimeout(() => (setup ? el('authDisplayName') : el('authUsername')).focus(), 50);
+}
+
+function showApp(user) {
+  currentUser = user;
+  el('authScreen').classList.add('hidden');
+  el('appRoot').classList.remove('hidden');
+  el('currentUserName').textContent = user.displayName || user.username;
+  el('currentUserRole').textContent = user.role === 'admin' ? 'Administrator' : user.username;
+  el('manageUsersBtn').classList.toggle('hidden', user.role !== 'admin');
+}
+
+async function initializeSession() {
+  const session = await api('/api/session');
+  if (!session.authenticated) {
+    showAuth(session.setupRequired);
+    return;
+  }
+  showApp(session.user);
+  await loadCustomers();
 }
 
 async function loadCustomers() {
@@ -133,9 +181,9 @@ function timelineItem(customerId, i) {
       </div>
       <div>
         <div class="timeline-text">${escapeHtml(i.summary)}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;">
-          <button type="button" class="secondary" data-edit-interaction="${escapeHtml(i.id)}" data-customer-id="${escapeHtml(customerId)}" style="padding:6px 9px;">Edit</button>
-          <button type="button" class="secondary danger" data-delete-interaction="${escapeHtml(i.id)}" data-customer-id="${escapeHtml(customerId)}" style="padding:6px 9px;">Delete</button>
+        <div class="timeline-actions">
+          <button type="button" class="mini-action" data-edit-interaction="${escapeHtml(i.id)}" data-customer-id="${escapeHtml(customerId)}">Edit</button>
+          <button type="button" class="mini-action danger" data-delete-interaction="${escapeHtml(i.id)}" data-customer-id="${escapeHtml(customerId)}">Delete</button>
         </div>
       </div>
     </div>
@@ -180,7 +228,7 @@ function customerCard(c) {
 function inquiryBlock(c) {
   const interactions = c.interactions || [];
   return `
-    <section>
+    <section class="inquiry-block">
       <div class="card-main">
         <div class="card-top">
           <div>
@@ -221,7 +269,7 @@ function customerAccordion(key, records) {
 
   return `
     <article class="customer-card">
-      <div class="card-main" data-accordion="${escapeHtml(key)}">
+      <div class="card-main accordion-head" data-accordion="${escapeHtml(key)}">
         <div class="card-top">
           <div>
             <h3 class="card-title">${escapeHtml(latestRecord.company)}</h3>
@@ -298,45 +346,15 @@ function summaryItem(label, value) {
   return `<div class="summary-item"><span>${escapeHtml(label)}</span>${escapeHtml(value || '—')}</div>`;
 }
 
-function ensureInteractionEditControls() {
-  const form = el('interactionForm');
-  let timeInput = el('interactionHappenedAt');
-  let cancelBtn = el('cancelInteractionEdit');
-  const submitBtn = form.querySelector('button[type="submit"]');
-
-  if (!timeInput) {
-    timeInput = document.createElement('input');
-    timeInput.type = 'datetime-local';
-    timeInput.id = 'interactionHappenedAt';
-    timeInput.hidden = true;
-    timeInput.style.cssText = 'grid-column:1/-1;width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 13px;outline:none;';
-    form.insertBefore(timeInput, submitBtn);
-  }
-
-  if (!cancelBtn) {
-    cancelBtn = document.createElement('button');
-    cancelBtn.type = 'button';
-    cancelBtn.id = 'cancelInteractionEdit';
-    cancelBtn.className = 'secondary';
-    cancelBtn.textContent = 'Cancel edit';
-    cancelBtn.hidden = true;
-    form.appendChild(cancelBtn);
-    cancelBtn.addEventListener('click', resetInteractionForm);
-  }
-
-  return { timeInput, cancelBtn, submitBtn };
-}
-
 function resetInteractionForm() {
   editingInteractionId = null;
   editingInteractionCustomerId = null;
   el('interactionType').value = 'Call';
   el('interactionSummary').value = '';
-  const { timeInput, cancelBtn, submitBtn } = ensureInteractionEditControls();
-  timeInput.value = '';
-  timeInput.hidden = true;
-  cancelBtn.hidden = true;
-  submitBtn.textContent = 'Add interaction';
+  el('interactionHappenedAt').value = '';
+  el('interactionHappenedAt').classList.add('hidden');
+  el('cancelInteractionEdit').classList.add('hidden');
+  el('interactionSubmitBtn').textContent = 'Add interaction';
 }
 
 function setInteractionEditMode(c, interaction) {
@@ -344,11 +362,10 @@ function setInteractionEditMode(c, interaction) {
   editingInteractionCustomerId = c.id;
   el('interactionType').value = interaction.type || 'Note';
   el('interactionSummary').value = interaction.summary || '';
-  const { timeInput, cancelBtn, submitBtn } = ensureInteractionEditControls();
-  timeInput.value = toDateTimeLocal(interaction.happenedAt);
-  timeInput.hidden = false;
-  cancelBtn.hidden = false;
-  submitBtn.textContent = 'Save changes';
+  el('interactionHappenedAt').value = toDateTimeLocal(interaction.happenedAt);
+  el('interactionHappenedAt').classList.remove('hidden');
+  el('cancelInteractionEdit').classList.remove('hidden');
+  el('interactionSubmitBtn').textContent = 'Save changes';
   setTimeout(() => el('interactionSummary').focus(), 80);
 }
 
@@ -384,9 +401,113 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 1800);
 }
 
+async function loadUsers() {
+  const data = await api('/api/users');
+  renderUsers(data.users || []);
+}
+
+function renderUsers(users) {
+  el('usersList').innerHTML = users.map(u => `
+    <div class="user-card" data-user-row="${escapeHtml(u.id)}">
+      <div class="user-card-head">
+        <div>
+          <strong>${escapeHtml(u.displayName)}</strong>
+          <span>@${escapeHtml(u.username)}</span>
+        </div>
+        <span class="status-pill ${u.active ? '' : 'inactive'}">${u.active ? 'Active' : 'Disabled'}</span>
+      </div>
+      <div class="user-fields">
+        <label>Display name
+          <input data-user-display value="${escapeHtml(u.displayName)}" maxlength="80">
+        </label>
+        <label>Username
+          <input data-user-username value="${escapeHtml(u.username)}" maxlength="50">
+        </label>
+        <label>Role
+          <select data-user-role>
+            <option value="user" ${u.role === 'user' ? 'selected' : ''}>User</option>
+            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+          </select>
+        </label>
+        <label>New password
+          <input data-user-password type="password" minlength="8" placeholder="Leave blank to keep">
+        </label>
+        <label class="user-active-check">
+          <input data-user-active type="checkbox" ${u.active ? 'checked' : ''}>
+          Account enabled
+        </label>
+      </div>
+      <div class="user-actions">
+        <button class="secondary" type="button" data-save-user="${escapeHtml(u.id)}">Save</button>
+        <button class="secondary danger" type="button" data-delete-user="${escapeHtml(u.id)}" ${u.id === currentUser?.id ? 'disabled' : ''}>Delete user</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+el('authForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  el('authError').classList.add('hidden');
+  const payload = {
+    username: el('authUsername').value,
+    password: el('authPassword').value
+  };
+  if (authMode === 'setup') payload.displayName = el('authDisplayName').value;
+
+  try {
+    const data = await api(authMode === 'setup' ? '/api/setup' : '/api/login', {
+      method:'POST',
+      body:JSON.stringify(payload)
+    });
+    showApp(data.user);
+    await loadCustomers();
+    if (authMode === 'setup' && data.migratedLegacyData) toast('Existing customer data moved into your account');
+  } catch (err) {
+    el('authError').textContent = err.message;
+    el('authError').classList.remove('hidden');
+  }
+});
+
+el('logoutBtn').addEventListener('click', async () => {
+  try { await api('/api/logout', { method:'POST' }); } catch {}
+  customers = [];
+  showAuth(false);
+});
+
+el('manageUsersBtn').addEventListener('click', async () => {
+  usersDialog.showModal();
+  try { await loadUsers(); }
+  catch (err) {
+    usersDialog.close();
+    alert(err.message);
+  }
+});
+
+el('newUserForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    await api('/api/users', {
+      method:'POST',
+      body:JSON.stringify({
+        displayName: el('newUserDisplayName').value,
+        username: el('newUserUsername').value,
+        password: el('newUserPassword').value,
+        role: el('newUserRole').value
+      })
+    });
+    el('newUserForm').reset();
+    el('newUserRole').value = 'user';
+    await loadUsers();
+    toast('User added');
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
 el('addCustomerBtn').addEventListener('click', () => openCustomerForm());
 el('searchInput').addEventListener('input', render);
 el('statusFilter').addEventListener('change', () => { quickFilter = 'all'; render(); });
+el('cancelInteractionEdit').addEventListener('click', resetInteractionForm);
 
 document.querySelectorAll('.stat-card').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -407,6 +528,49 @@ document.addEventListener('click', async e => {
   const closeId = e.target.dataset.close;
   if (closeId) {
     el(closeId).close();
+    return;
+  }
+
+  const saveUserBtn = e.target.closest('[data-save-user]');
+  if (saveUserBtn) {
+    const id = saveUserBtn.dataset.saveUser;
+    const row = saveUserBtn.closest('[data-user-row]');
+    const password = row.querySelector('[data-user-password]').value;
+    const payload = {
+      displayName: row.querySelector('[data-user-display]').value,
+      username: row.querySelector('[data-user-username]').value,
+      role: row.querySelector('[data-user-role]').value,
+      active: row.querySelector('[data-user-active]').checked
+    };
+    if (password) payload.password = password;
+
+    try {
+      const data = await api(`/api/users/${id}`, { method:'PUT', body:JSON.stringify(payload) });
+      if (id === currentUser.id) {
+        currentUser = data.user;
+        showApp(currentUser);
+      }
+      await loadUsers();
+      toast('User updated');
+    } catch (err) {
+      alert(err.message);
+    }
+    return;
+  }
+
+  const deleteUserBtn = e.target.closest('[data-delete-user]');
+  if (deleteUserBtn) {
+    const id = deleteUserBtn.dataset.deleteUser;
+    const row = deleteUserBtn.closest('[data-user-row]');
+    const username = row.querySelector('[data-user-username]').value;
+    if (!confirm(`Delete user "${username}"?\n\nTheir customer data will be archived, not erased.`)) return;
+    try {
+      await api(`/api/users/${id}`, { method:'DELETE' });
+      await loadUsers();
+      toast('User removed and data archived');
+    } catch (err) {
+      alert(err.message);
+    }
     return;
   }
 
@@ -555,9 +719,8 @@ el('interactionForm').addEventListener('submit', async e => {
 
   try {
     if (editingInteractionId) {
-      const timeInput = el('interactionHappenedAt');
-      if (timeInput?.value) {
-        const parsed = new Date(timeInput.value);
+      if (el('interactionHappenedAt').value) {
+        const parsed = new Date(el('interactionHappenedAt').value);
         if (Number.isNaN(parsed.getTime())) throw new Error('Please enter a valid interaction date and time.');
         payload.happenedAt = parsed.toISOString();
       }
@@ -587,9 +750,9 @@ el('interactionForm').addEventListener('submit', async e => {
   }
 });
 
-ensureInteractionEditControls();
-
-loadCustomers().catch(err => {
+initializeSession().catch(err => {
   console.error(err);
-  alert('Could not load CRM data.');
+  showAuth(false);
+  el('authError').textContent = 'Could not initialize the app.';
+  el('authError').classList.remove('hidden');
 });
