@@ -6,6 +6,8 @@ const detailDialog = el('detailDialog');
 let customers = [];
 let selectedCustomerId = null;
 let quickFilter = 'all';
+let editingInteractionId = null;
+let editingInteractionCustomerId = null;
 const expandedGroups = new Set();
 
 function todayLocal() {
@@ -40,6 +42,13 @@ function formatDateTime(value) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return escapeHtml(value);
   return d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+function toDateTimeLocal(value) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0,16);
 }
 
 function searchableText(c) {
@@ -115,6 +124,24 @@ function renderStats() {
   el('statVendor').textContent = customers.filter(c => c.status === 'Waiting on Vendor').length;
 }
 
+function timelineItem(customerId, i) {
+  return `
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-type">${escapeHtml(i.type)}</div>
+        <div class="timeline-date">${formatDateTime(i.happenedAt)}</div>
+      </div>
+      <div>
+        <div class="timeline-text">${escapeHtml(i.summary)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;">
+          <button type="button" class="secondary" data-edit-interaction="${escapeHtml(i.id)}" data-customer-id="${escapeHtml(customerId)}" style="padding:6px 9px;">Edit</button>
+          <button type="button" class="secondary danger" data-delete-interaction="${escapeHtml(i.id)}" data-customer-id="${escapeHtml(customerId)}" style="padding:6px 9px;">Delete</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function customerCard(c) {
   const latest = (c.interactions || [])[0];
   return `
@@ -144,6 +171,7 @@ function customerCard(c) {
       <footer class="card-footer">
         <button data-log="${escapeHtml(c.id)}">+ Interaction</button>
         <button data-edit="${escapeHtml(c.id)}">Edit</button>
+        <button class="danger" data-delete-inquiry="${escapeHtml(c.id)}">Delete</button>
       </footer>
     </article>
   `;
@@ -171,15 +199,7 @@ function inquiryBlock(c) {
 
         ${interactions.length ? `
           <div class="timeline">
-            ${interactions.map(i => `
-              <div class="timeline-item">
-                <div>
-                  <div class="timeline-type">${escapeHtml(i.type)}</div>
-                  <div class="timeline-date">${formatDateTime(i.happenedAt)}</div>
-                </div>
-                <div class="timeline-text">${escapeHtml(i.summary)}</div>
-              </div>
-            `).join('')}
+            ${interactions.map(i => timelineItem(c.id, i)).join('')}
           </div>
         ` : `<div class="small">No interactions logged yet.</div>`}
       </div>
@@ -187,6 +207,7 @@ function inquiryBlock(c) {
         <button data-open="${escapeHtml(c.id)}">Open</button>
         <button data-log="${escapeHtml(c.id)}">+ Interaction</button>
         <button data-edit="${escapeHtml(c.id)}">Edit</button>
+        <button class="danger" data-delete-inquiry="${escapeHtml(c.id)}">Delete</button>
       </footer>
     </section>
   `;
@@ -277,8 +298,63 @@ function summaryItem(label, value) {
   return `<div class="summary-item"><span>${escapeHtml(label)}</span>${escapeHtml(value || '—')}</div>`;
 }
 
+function ensureInteractionEditControls() {
+  const form = el('interactionForm');
+  let timeInput = el('interactionHappenedAt');
+  let cancelBtn = el('cancelInteractionEdit');
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  if (!timeInput) {
+    timeInput = document.createElement('input');
+    timeInput.type = 'datetime-local';
+    timeInput.id = 'interactionHappenedAt';
+    timeInput.hidden = true;
+    timeInput.style.cssText = 'grid-column:1/-1;width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 13px;outline:none;';
+    form.insertBefore(timeInput, submitBtn);
+  }
+
+  if (!cancelBtn) {
+    cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.id = 'cancelInteractionEdit';
+    cancelBtn.className = 'secondary';
+    cancelBtn.textContent = 'Cancel edit';
+    cancelBtn.hidden = true;
+    form.appendChild(cancelBtn);
+    cancelBtn.addEventListener('click', resetInteractionForm);
+  }
+
+  return { timeInput, cancelBtn, submitBtn };
+}
+
+function resetInteractionForm() {
+  editingInteractionId = null;
+  editingInteractionCustomerId = null;
+  el('interactionType').value = 'Call';
+  el('interactionSummary').value = '';
+  const { timeInput, cancelBtn, submitBtn } = ensureInteractionEditControls();
+  timeInput.value = '';
+  timeInput.hidden = true;
+  cancelBtn.hidden = true;
+  submitBtn.textContent = 'Add interaction';
+}
+
+function setInteractionEditMode(c, interaction) {
+  editingInteractionId = interaction.id;
+  editingInteractionCustomerId = c.id;
+  el('interactionType').value = interaction.type || 'Note';
+  el('interactionSummary').value = interaction.summary || '';
+  const { timeInput, cancelBtn, submitBtn } = ensureInteractionEditControls();
+  timeInput.value = toDateTimeLocal(interaction.happenedAt);
+  timeInput.hidden = false;
+  cancelBtn.hidden = false;
+  submitBtn.textContent = 'Save changes';
+  setTimeout(() => el('interactionSummary').focus(), 80);
+}
+
 function openDetail(c, focusInteraction=false) {
   selectedCustomerId = c.id;
+  resetInteractionForm();
   el('detailStatus').textContent = c.status || 'Customer';
   el('detailCompany').textContent = c.company;
   el('detailContact').textContent = [c.contact,c.phone,c.email].filter(Boolean).join(' · ') || 'No contact details entered';
@@ -294,15 +370,7 @@ function openDetail(c, focusInteraction=false) {
 
   const interactions = (c.interactions || []).slice(0,10);
   el('interactionTimeline').innerHTML = interactions.length
-    ? interactions.map(i => `
-      <div class="timeline-item">
-        <div>
-          <div class="timeline-type">${escapeHtml(i.type)}</div>
-          <div class="timeline-date">${formatDateTime(i.happenedAt)}</div>
-        </div>
-        <div class="timeline-text">${escapeHtml(i.summary)}</div>
-      </div>
-    `).join('')
+    ? interactions.map(i => timelineItem(c.id, i)).join('')
     : `<div class="empty"><p>No interactions logged yet.</p></div>`;
 
   detailDialog.showModal();
@@ -335,9 +403,66 @@ el('clearFilterBtn').addEventListener('click', () => {
   render();
 });
 
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
   const closeId = e.target.dataset.close;
-  if (closeId) el(closeId).close();
+  if (closeId) {
+    el(closeId).close();
+    return;
+  }
+
+  const deleteInteractionBtn = e.target.closest('[data-delete-interaction]');
+  if (deleteInteractionBtn) {
+    const customerId = deleteInteractionBtn.dataset.customerId;
+    const interactionId = deleteInteractionBtn.dataset.deleteInteraction;
+    if (!confirm('Delete this interaction? This cannot be undone.')) return;
+    try {
+      await api(`/api/customers/${customerId}/interactions/${interactionId}`, { method:'DELETE' });
+      const detailWasOpen = detailDialog.open && selectedCustomerId === customerId;
+      await loadCustomers();
+      if (detailWasOpen) {
+        const fresh = customers.find(x => x.id === customerId);
+        detailDialog.close();
+        if (fresh) openDetail(fresh);
+      }
+      toast('Interaction deleted');
+    } catch (err) {
+      alert(err.message);
+    }
+    return;
+  }
+
+  const editInteractionBtn = e.target.closest('[data-edit-interaction]');
+  if (editInteractionBtn) {
+    const customerId = editInteractionBtn.dataset.customerId;
+    const interactionId = editInteractionBtn.dataset.editInteraction;
+    const c = customers.find(x => x.id === customerId);
+    const interaction = c?.interactions?.find(i => i.id === interactionId);
+    if (!c || !interaction) return;
+    if (!detailDialog.open || selectedCustomerId !== customerId) {
+      if (detailDialog.open) detailDialog.close();
+      openDetail(c);
+    }
+    setInteractionEditMode(c, interaction);
+    return;
+  }
+
+  const deleteInquiryBtn = e.target.closest('[data-delete-inquiry]');
+  if (deleteInquiryBtn) {
+    const id = deleteInquiryBtn.dataset.deleteInquiry;
+    const c = customers.find(x => x.id === id);
+    if (!c) return;
+    const label = c.nextAction ? `\n\nInitial Interest: ${c.nextAction}` : '';
+    if (!confirm(`Delete this inquiry and all of its interaction history?${label}\n\nThis cannot be undone.`)) return;
+    try {
+      await api(`/api/customers/${id}`, { method:'DELETE' });
+      if (detailDialog.open && selectedCustomerId === id) detailDialog.close();
+      await loadCustomers();
+      toast('Inquiry deleted');
+    } catch (err) {
+      alert(err.message);
+    }
+    return;
+  }
 
   const accordion = e.target.closest('[data-accordion]');
   if (accordion) {
@@ -398,12 +523,13 @@ el('customerForm').addEventListener('submit', async e => {
 el('deleteCustomerBtn').addEventListener('click', async () => {
   const id = el('customerId').value;
   if (!id) return;
-  if (!confirm('Delete this customer and all interaction history?')) return;
+  if (!confirm('Delete this inquiry and all interaction history? This cannot be undone.')) return;
   try {
     await api(`/api/customers/${id}`, { method:'DELETE' });
     customerDialog.close();
+    if (detailDialog.open && selectedCustomerId === id) detailDialog.close();
     await loadCustomers();
-    toast('Customer deleted');
+    toast('Inquiry deleted');
   } catch (err) {
     alert(err.message);
   }
@@ -418,29 +544,50 @@ el('editFromDetailBtn').addEventListener('click', () => {
 
 el('interactionForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const c = customers.find(x => x.id === selectedCustomerId);
+  const customerId = editingInteractionCustomerId || selectedCustomerId;
+  const c = customers.find(x => x.id === customerId);
   if (!c) return;
+
+  const payload = {
+    type: el('interactionType').value,
+    summary: el('interactionSummary').value
+  };
+
   try {
-    await api(`/api/customers/${c.id}/interactions`, {
-      method:'POST',
-      body:JSON.stringify({
-        type: el('interactionType').value,
-        summary: el('interactionSummary').value,
-        happenedAt: new Date().toISOString()
-      })
-    });
-    el('interactionSummary').value = '';
+    if (editingInteractionId) {
+      const timeInput = el('interactionHappenedAt');
+      if (timeInput?.value) {
+        const parsed = new Date(timeInput.value);
+        if (Number.isNaN(parsed.getTime())) throw new Error('Please enter a valid interaction date and time.');
+        payload.happenedAt = parsed.toISOString();
+      }
+      await api(`/api/customers/${customerId}/interactions/${editingInteractionId}`, {
+        method:'PUT',
+        body:JSON.stringify(payload)
+      });
+    } else {
+      payload.happenedAt = new Date().toISOString();
+      await api(`/api/customers/${customerId}/interactions`, {
+        method:'POST',
+        body:JSON.stringify(payload)
+      });
+    }
+
+    const wasEditing = Boolean(editingInteractionId);
+    resetInteractionForm();
     await loadCustomers();
-    const fresh = customers.find(x => x.id === c.id);
+    const fresh = customers.find(x => x.id === customerId);
     if (fresh) {
-      detailDialog.close();
+      if (detailDialog.open) detailDialog.close();
       openDetail(fresh);
     }
-    toast('Interaction logged');
+    toast(wasEditing ? 'Interaction updated' : 'Interaction logged');
   } catch (err) {
     alert(err.message);
   }
 });
+
+ensureInteractionEditControls();
 
 loadCustomers().catch(err => {
   console.error(err);
