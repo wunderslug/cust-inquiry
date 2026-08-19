@@ -204,6 +204,24 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    const interactionItemMatch = pathname.match(/^\/api\/customers\/([^/]+)\/interactions\/([^/]+)$/);
+    if (interactionItemMatch && req.method === 'DELETE') {
+      const customerId = interactionItemMatch[1];
+      const interactionId = interactionItemMatch[2];
+      const data = readData();
+      const customer = data.customers.find(c => c.id === customerId);
+      if (!customer) return sendJson(res, 404, { error: 'Customer not found.' });
+
+      customer.interactions = Array.isArray(customer.interactions) ? customer.interactions : [];
+      const index = customer.interactions.findIndex(i => i.id === interactionId);
+      if (index === -1) return sendJson(res, 404, { error: 'Interaction not found.' });
+
+      customer.interactions.splice(index, 1);
+      customer.updatedAt = new Date().toISOString();
+      writeData(data);
+      return sendJson(res, 200, { ok: true });
+    }
+
     const interactionMatch = pathname.match(/^\/api\/customers\/([^/]+)\/interactions$/);
     if (interactionMatch && req.method === 'POST') {
       const id = interactionMatch[1];
