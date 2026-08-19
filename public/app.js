@@ -6,6 +6,7 @@ const detailDialog = el('detailDialog');
 let customers = [];
 let selectedCustomerId = null;
 let quickFilter = 'all';
+const expandedGroups = new Set();
 
 function todayLocal() {
   const d = new Date();
@@ -46,6 +47,10 @@ function searchableText(c) {
     c.company,c.contact,c.phone,c.email,c.quoteOrder,c.status,c.nextAction,c.notes,
     ...(c.interactions || []).flatMap(i => [i.type,i.summary])
   ].join(' ').toLowerCase();
+}
+
+function customerKey(c) {
+  return String(c.company || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 async function api(url, options={}) {
@@ -93,6 +98,16 @@ function filteredCustomers() {
     });
 }
 
+function groupedCustomers(items) {
+  const groups = new Map();
+  for (const c of items) {
+    const key = customerKey(c) || c.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(c);
+  }
+  return [...groups.entries()].map(([key, records]) => ({ key, records }));
+}
+
 function renderStats() {
   el('statOpen').textContent = customers.filter(c => !STATUS_CLOSED.has(c.status)).length;
   el('statDue').textContent = customers.filter(isDue).length;
@@ -118,13 +133,13 @@ function customerCard(c) {
           <div class="meta-row"><span class="meta-label">Next follow-up</span><strong>${formatDate(c.nextFollowUp)}</strong></div>
           <div class="meta-row"><span class="meta-label">Last contact</span><strong>${latest ? formatDateTime(latest.happenedAt) : '—'}</strong></div>
         </div>
-	${latest ? `
-  	  <div class="latest-interaction">
+        ${latest ? `
+          <div class="latest-interaction">
             <strong>${escapeHtml(latest.type)}</strong>
             <span>${escapeHtml(latest.summary)}</span>
           </div>
         ` : ''}
-        ${c.nextAction ? `<div class="next-action"><strong>Next action</strong>${escapeHtml(c.nextAction)}</div>` : ''}
+        ${c.nextAction ? `<div class="next-action"><strong>Initial Interest</strong>${escapeHtml(c.nextAction)}</div>` : ''}
       </div>
       <footer class="card-footer">
         <button data-log="${escapeHtml(c.id)}">+ Interaction</button>
@@ -134,12 +149,93 @@ function customerCard(c) {
   `;
 }
 
+function inquiryBlock(c) {
+  const interactions = c.interactions || [];
+  return `
+    <section>
+      <div class="card-main">
+        <div class="card-top">
+          <div>
+            <div class="eyebrow">Inquiry</div>
+            <div class="card-contact">${escapeHtml(c.contact || c.phone || c.email || '')}</div>
+          </div>
+          <span class="status-pill ${isDue(c) ? 'due' : ''}">${escapeHtml(isDue(c) ? 'Follow up' : c.status)}</span>
+        </div>
+
+        ${c.nextAction ? `<div class="next-action"><strong>Initial Interest</strong>${escapeHtml(c.nextAction)}</div>` : ''}
+
+        <div class="card-meta">
+          <div class="meta-row"><span class="meta-label">Quote / Order</span><strong>${escapeHtml(c.quoteOrder || '—')}</strong></div>
+          <div class="meta-row"><span class="meta-label">Next follow-up</span><strong>${formatDate(c.nextFollowUp)}</strong></div>
+        </div>
+
+        ${interactions.length ? `
+          <div class="timeline">
+            ${interactions.map(i => `
+              <div class="timeline-item">
+                <div>
+                  <div class="timeline-type">${escapeHtml(i.type)}</div>
+                  <div class="timeline-date">${formatDateTime(i.happenedAt)}</div>
+                </div>
+                <div class="timeline-text">${escapeHtml(i.summary)}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<div class="small">No interactions logged yet.</div>`}
+      </div>
+      <footer class="card-footer">
+        <button data-open="${escapeHtml(c.id)}">Open</button>
+        <button data-log="${escapeHtml(c.id)}">+ Interaction</button>
+        <button data-edit="${escapeHtml(c.id)}">Edit</button>
+      </footer>
+    </section>
+  `;
+}
+
+function customerAccordion(key, records) {
+  const latestRecord = [...records].sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))[0];
+  const interactionCount = records.reduce((sum,c) => sum + (c.interactions || []).length, 0);
+  const expanded = expandedGroups.has(key);
+  const due = records.some(isDue);
+
+  return `
+    <article class="customer-card">
+      <div class="card-main" data-accordion="${escapeHtml(key)}">
+        <div class="card-top">
+          <div>
+            <h3 class="card-title">${escapeHtml(latestRecord.company)}</h3>
+            <div class="card-contact">${escapeHtml(latestRecord.contact || latestRecord.phone || latestRecord.email || 'No contact entered')}</div>
+          </div>
+          <span class="status-pill ${due ? 'due' : ''}">${escapeHtml(due ? 'Follow up' : 'History')}</span>
+        </div>
+        <div class="card-meta">
+          <div class="meta-row"><span class="meta-label">Inquiries</span><strong>${records.length}</strong></div>
+          <div class="meta-row"><span class="meta-label">Interactions</span><strong>${interactionCount}</strong></div>
+          <div class="meta-row"><span class="meta-label">${expanded ? 'Collapse' : 'Expand'}</span><strong>${expanded ? '▲' : '▼'}</strong></div>
+        </div>
+        ${latestRecord.nextAction ? `<div class="next-action"><strong>Initial Interest</strong>${escapeHtml(latestRecord.nextAction)}</div>` : ''}
+      </div>
+      <div class="${expanded ? '' : 'hidden'}">
+        ${records.map(inquiryBlock).join('')}
+      </div>
+    </article>
+  `;
+}
+
 function render() {
   renderStats();
   const items = filteredCustomers();
+  const groups = groupedCustomers(items);
   const grid = el('customerGrid');
-  grid.innerHTML = items.map(customerCard).join('');
-  el('resultCount').textContent = `${items.length} shown`;
+
+  grid.innerHTML = groups.map(({key, records}) => {
+    const interactionCount = records.reduce((sum,c) => sum + (c.interactions || []).length, 0);
+    return records.length > 1 || interactionCount > 1
+      ? customerAccordion(key, records)
+      : customerCard(records[0]);
+  }).join('');
+
+  el('resultCount').textContent = `${groups.length} customer${groups.length === 1 ? '' : 's'} · ${items.length} ${items.length === 1 ? 'inquiry' : 'inquiries'}`;
   el('emptyState').classList.toggle('hidden', items.length !== 0);
 
   let title = 'Active customers';
@@ -190,9 +286,11 @@ function openDetail(c, focusInteraction=false) {
   el('detailSummary').innerHTML = [
     summaryItem('Quote / Order #', c.quoteOrder),
     summaryItem('Next follow-up', c.nextFollowUp ? formatDate(c.nextFollowUp) : ''),
-    summaryItem('Next action', c.nextAction),
+    summaryItem('Initial Interest', c.nextAction),
     summaryItem('Notes', c.notes)
   ].join('');
+
+  el('interactionInterest').textContent = c.nextAction || '—';
 
   const interactions = (c.interactions || []).slice(0,10);
   el('interactionTimeline').innerHTML = interactions.length
@@ -241,19 +339,30 @@ document.addEventListener('click', e => {
   const closeId = e.target.dataset.close;
   if (closeId) el(closeId).close();
 
+  const accordion = e.target.closest('[data-accordion]');
+  if (accordion) {
+    const key = accordion.dataset.accordion;
+    if (expandedGroups.has(key)) expandedGroups.delete(key);
+    else expandedGroups.add(key);
+    render();
+    return;
+  }
+
   const openId = e.target.closest('[data-open]')?.dataset.open;
   if (openId) {
     const c = customers.find(x => x.id === openId);
     if (c) openDetail(c);
+    return;
   }
 
-  const editId = e.target.dataset.edit;
+  const editId = e.target.closest('[data-edit]')?.dataset.edit;
   if (editId) {
     const c = customers.find(x => x.id === editId);
     if (c) openCustomerForm(c);
+    return;
   }
 
-  const logId = e.target.dataset.log;
+  const logId = e.target.closest('[data-log]')?.dataset.log;
   if (logId) {
     const c = customers.find(x => x.id === logId);
     if (c) openDetail(c, true);
