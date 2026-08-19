@@ -118,6 +118,18 @@ function interactionFromPayload(body) {
   };
 }
 
+function updateInteractionFromPayload(body, existing) {
+  const allowed = ['Call', 'Email', 'Counter Visit', 'Quote', 'Order', 'Vendor', 'Note'];
+  const type = allowed.includes(body.type) ? body.type : existing.type;
+  return {
+    ...existing,
+    type,
+    summary: cleanString(body.summary, 2000),
+    happenedAt: cleanString(body.happenedAt, 40) || existing.happenedAt,
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function serveStatic(req, res) {
   let pathname;
   try {
@@ -205,7 +217,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     const interactionItemMatch = pathname.match(/^\/api\/customers\/([^/]+)\/interactions\/([^/]+)$/);
-    if (interactionItemMatch && req.method === 'DELETE') {
+    if (interactionItemMatch) {
       const customerId = interactionItemMatch[1];
       const interactionId = interactionItemMatch[2];
       const data = readData();
@@ -216,10 +228,22 @@ const server = http.createServer(async (req, res) => {
       const index = customer.interactions.findIndex(i => i.id === interactionId);
       if (index === -1) return sendJson(res, 404, { error: 'Interaction not found.' });
 
-      customer.interactions.splice(index, 1);
-      customer.updatedAt = new Date().toISOString();
-      writeData(data);
-      return sendJson(res, 200, { ok: true });
+      if (req.method === 'PUT') {
+        const body = await parseBody(req);
+        const updated = updateInteractionFromPayload(body, customer.interactions[index]);
+        if (!updated.summary) return sendJson(res, 400, { error: 'Interaction summary is required.' });
+        customer.interactions[index] = updated;
+        customer.updatedAt = new Date().toISOString();
+        writeData(data);
+        return sendJson(res, 200, updated);
+      }
+
+      if (req.method === 'DELETE') {
+        customer.interactions.splice(index, 1);
+        customer.updatedAt = new Date().toISOString();
+        writeData(data);
+        return sendJson(res, 200, { ok: true });
+      }
     }
 
     const interactionMatch = pathname.match(/^\/api\/customers\/([^/]+)\/interactions$/);
