@@ -149,11 +149,16 @@ button:disabled{opacity:.45;cursor:not-allowed}
   position:relative;
 }
 .customer-card:hover{border-color:#bdb4a5}
-.card-main{padding:18px;cursor:pointer}
+.card-main{
+  padding:18px;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+}
 .inquiry-block .card-main{cursor:default}
 .accordion-head{cursor:pointer}
 .inquiry-block{border-top:1px solid var(--line)}
-.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;order:0}
 .card-title{font-size:1.1rem;font-weight:850;margin:0}
 .card-contact{color:var(--muted);font-size:.88rem;margin-top:3px}
 .status-pill{
@@ -171,6 +176,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   display:grid;
   gap:8px;
   font-size:.86rem;
+  order:2;
 }
 .meta-row{display:grid;grid-template-columns:110px 1fr;gap:9px}
 .meta-label{color:var(--muted)}
@@ -181,6 +187,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
   border-radius:12px;
   font-size:.88rem;
 }
+.next-action{
+  order:1;
+  font-weight:800;
+}
+.latest-interaction{order:3}
+.card-main > .timeline,.card-main > .small{order:4}
 .next-action strong,.latest-interaction strong{
   display:block;
   font-size:.7rem;
