@@ -296,6 +296,15 @@ function installInteractionWorkflowSubmit() {
   }, true);
 }
 
+const coreCustomerAccordion = customerAccordion;
+customerAccordion = function(key, records) {
+  const latestRecord = [...records].sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))[0];
+  const due = records.some(isDue);
+  const oldMarkup = `<span class="status-pill ${due ? 'due' : ''}">${escapeHtml(due ? 'Follow up' : 'History')}</span>`;
+  const newMarkup = `<span class="status-pill ${due ? 'due' : ''}">${escapeHtml(latestRecord.status || 'New Inquiry')}</span>`;
+  return coreCustomerAccordion(key, records).replace(oldMarkup, newMarkup);
+};
+
 ensureCreatedDateField();
 ensureSortControl();
 syncToolbarColumns();
