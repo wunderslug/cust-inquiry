@@ -1,5 +1,5 @@
 // Small UI enhancements kept separate from the core CRM logic.
-// Adds Date Created behavior to the customer form and grouped-card sorting.
+// Adds Date Created behavior, grouped-card sorting, and a wider desktop workspace.
 
 let sortMode = 'attention';
 
@@ -145,7 +145,20 @@ function syncToolbarColumns() {
     : '';
 }
 
+function widenDesktopWorkspace() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .shell { max-width: 1440px; }
+    .topbar {
+      padding-left: max(24px, calc((100vw - 1440px) / 2));
+      padding-right: max(24px, calc((100vw - 1440px) / 2));
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 ensureCreatedDateField();
 ensureSortControl();
 syncToolbarColumns();
+widenDesktopWorkspace();
 window.addEventListener('resize', syncToolbarColumns);
