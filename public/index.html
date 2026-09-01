@@ -104,12 +104,28 @@
     <dialog id="customerDialog">
       <form id="customerForm" method="dialog">
         <div class="modal-head">
-          <div>
-            <div class="eyebrow">Account</div>
-            <h2 id="customerDialogTitle">New customer</h2>
-          </div>
-          <button type="button" class="icon-btn" data-close="customerDialog" aria-label="Close">×</button>
-        </div>
+  <div>
+    <div class="eyebrow">Customer</div>
+    <h2 id="detailCompany"></h2>
+    <div class="detail-contact" id="detailContact"></div>
+  </div>
+
+  <div class="detail-head-actions">
+    <select id="detailStatusSelect" class="status-select" aria-label="Customer status">
+      <option>New Inquiry</option>
+      <option>Quote Needed</option>
+      <option>Quote Sent</option>
+      <option>Waiting on Customer</option>
+      <option>Ordered</option>
+      <option>Waiting on Vendor</option>
+      <option>Ready</option>
+      <option>Complete</option>
+      <option>Lost / Cancelled</option>
+    </select>
+
+    <button type="button" class="icon-btn" data-close="detailDialog" aria-label="Close">×</button>
+  </div>
+</div> 
 
         <input type="hidden" id="customerId">
         <div class="form-grid">

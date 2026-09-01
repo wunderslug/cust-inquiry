@@ -366,3 +366,25 @@ textarea{resize:vertical}
   .user-active-check{padding-bottom:0}
   .auth-card{padding:22px}
 }
+
+.detail-head-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.status-select{
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--ink);
+  border-radius:10px;
+  padding:9px 11px;
+  font-size:.82rem;
+  font-weight:800;
+  outline:none;
+}
+
+.status-select:focus{
+  border-color:var(--olive);
+  box-shadow:0 0 0 3px rgba(104,112,90,.12);
+}

@@ -372,7 +372,7 @@ function setInteractionEditMode(c, interaction) {
 function openDetail(c, focusInteraction=false) {
   selectedCustomerId = c.id;
   resetInteractionForm();
-  el('detailStatus').textContent = c.status || 'Customer';
+  el('detailStatusSelect').value = c.status || 'New Inquiry';
   el('detailCompany').textContent = c.company;
   el('detailContact').textContent = [c.contact,c.phone,c.email].filter(Boolean).join(' · ') || 'No contact details entered';
 
@@ -755,4 +755,39 @@ initializeSession().catch(err => {
   showAuth(false);
   el('authError').textContent = 'Could not initialize the app.';
   el('authError').classList.remove('hidden');
+});
+
+el('detailStatusSelect').addEventListener('change', async () => {
+  const c = customers.find(x => x.id === selectedCustomerId);
+  if (!c) return;
+
+  const newStatus = el('detailStatusSelect').value;
+
+  try {
+    await api(`/api/customers/${c.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        company: c.company,
+        contact: c.contact,
+        phone: c.phone,
+        email: c.email,
+        quoteOrder: c.quoteOrder,
+        status: newStatus,
+        nextFollowUp: c.nextFollowUp,
+        nextAction: c.nextAction,
+        notes: c.notes,
+        tags: c.tags || []
+      })
+    });
+
+    await loadCustomers();
+
+    const fresh = customers.find(x => x.id === c.id);
+    if (fresh) selectedCustomerId = fresh.id;
+
+    toast(`Status changed to ${newStatus}`);
+  } catch (err) {
+    el('detailStatusSelect').value = c.status;
+    alert(err.message);
+  }
 });
