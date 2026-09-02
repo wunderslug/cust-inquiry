@@ -192,6 +192,7 @@ repeatInquiryStyle.textContent = `
     overflow:visible;
     position:relative;
     isolation:isolate;
+    background:var(--surface);
   }
   .multi-order-card::before,
   .multi-order-card::after{
@@ -204,6 +205,7 @@ repeatInquiryStyle.textContent = `
     border-radius:var(--radius);
     background:var(--surface);
     z-index:-1;
+    pointer-events:none;
   }
   .multi-order-card::before{bottom:-6px;opacity:.72}
   .multi-order-card::after{left:18px;right:18px;bottom:-11px;opacity:.42;z-index:-2}
@@ -286,7 +288,14 @@ repeatInquiryStyle.textContent = `
     border-radius:9px;
   }
   .older-orders-toggle:hover{background:var(--surface-2)}
-  .customer-group-actions{margin-top:8px;border-top:1px solid var(--line)}
+  .multi-order-card > .customer-group-actions{
+    position:relative;
+    z-index:1;
+    margin-top:8px;
+    border-top:1px solid var(--line);
+    border-radius:0 0 var(--radius) var(--radius);
+    overflow:hidden;
+  }
 
   @media(max-width:640px){
     .multi-order-head{padding:15px 14px 11px}
