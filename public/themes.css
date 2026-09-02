@@ -1,0 +1,151 @@
+/* Optional UI themes. Workshop intentionally inherits the existing CRM design. */
+
+.theme-switcher{
+  width:auto;
+  min-width:142px;
+  border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.07);
+  color:#f7f3e9;
+  border-radius:10px;
+  padding:9px 30px 9px 10px;
+  font-size:.78rem;
+  font-weight:800;
+  outline:none;
+}
+.theme-switcher option{color:#222;background:#fff}
+.theme-switcher:focus{border-color:rgba(255,255,255,.55);box-shadow:0 0 0 3px rgba(255,255,255,.10)}
+
+/* MATERIAL --------------------------------------------------------------- */
+body[data-ui-theme="material"]{
+  --bg:#f7f8fa;
+  --surface:#ffffff;
+  --surface-2:#eef2f7;
+  --ink:#202124;
+  --muted:#687078;
+  --line:#dfe3e8;
+  --olive:#3f5f8a;
+  --olive-dark:#304d74;
+  --rust:#b45f27;
+  --danger:#b3261e;
+  --shadow:0 2px 10px rgba(32,33,36,.08);
+  --radius:12px;
+}
+body[data-ui-theme="material"] .topbar{
+  background:#ffffff;
+  color:var(--ink);
+  border-bottom:1px solid var(--line);
+  box-shadow:0 1px 4px rgba(32,33,36,.08);
+}
+body[data-ui-theme="material"] .dark-secondary,
+body[data-ui-theme="material"] .theme-switcher{
+  background:#fff!important;
+  color:var(--ink)!important;
+  border-color:var(--line)!important;
+}
+body[data-ui-theme="material"] .theme-switcher option{color:var(--ink);background:#fff}
+body[data-ui-theme="material"] .stat-card,
+body[data-ui-theme="material"] .customer-card{
+  border-radius:12px;
+  box-shadow:0 1px 3px rgba(32,33,36,.10),0 1px 2px rgba(32,33,36,.06);
+}
+body[data-ui-theme="material"] .primary{border-radius:9px}
+body[data-ui-theme="material"] .secondary,
+body[data-ui-theme="material"] .link-button,
+body[data-ui-theme="material"] input,
+body[data-ui-theme="material"] select,
+body[data-ui-theme="material"] textarea{border-radius:9px}
+body[data-ui-theme="material"] .card-footer,
+body[data-ui-theme="material"] .next-action,
+body[data-ui-theme="material"] .latest-interaction,
+body[data-ui-theme="material"] .summary-item,
+body[data-ui-theme="material"] .timeline-item,
+body[data-ui-theme="material"] .user-card{background:#f8f9fa}
+body[data-ui-theme="material"] dialog{border-radius:14px}
+
+/* SLATE DARK ------------------------------------------------------------- */
+body[data-ui-theme="slate"]{
+  color-scheme:dark;
+  --bg:#171a1f;
+  --surface:#22262d;
+  --surface-2:#303640;
+  --ink:#eef1f5;
+  --muted:#a8b0ba;
+  --line:#3b424d;
+  --olive:#7599b8;
+  --olive-dark:#9bb8d0;
+  --rust:#e0a36d;
+  --danger:#ef8c82;
+  --shadow:0 14px 34px rgba(0,0,0,.26);
+  --radius:15px;
+  background:#171a1f;
+}
+body[data-ui-theme="slate"] .topbar{background:#0f1216;color:#f4f6f8;border-bottom:1px solid #303640}
+body[data-ui-theme="slate"] .auth-screen{background:radial-gradient(circle at top left,rgba(117,153,184,.12),transparent 34%),var(--bg)}
+body[data-ui-theme="slate"] .dark-secondary,
+body[data-ui-theme="slate"] .theme-switcher{background:#191d23!important;color:#eef1f5!important;border-color:#424a55!important}
+body[data-ui-theme="slate"] .theme-switcher option{background:#22262d;color:#eef1f5}
+body[data-ui-theme="slate"] .secondary,
+body[data-ui-theme="slate"] .link-button,
+body[data-ui-theme="slate"] .icon-btn,
+body[data-ui-theme="slate"] .mini-action{background:#292e36;color:var(--ink);border-color:var(--line)}
+body[data-ui-theme="slate"] .secondary:hover{background:#343a44}
+body[data-ui-theme="slate"] .card-footer,
+body[data-ui-theme="slate"] .next-action,
+body[data-ui-theme="slate"] .latest-interaction,
+body[data-ui-theme="slate"] .summary-item,
+body[data-ui-theme="slate"] .timeline-item,
+body[data-ui-theme="slate"] .user-card{background:#292e36;border-color:var(--line)}
+body[data-ui-theme="slate"] .status-pill{background:#353c46;color:#e7ebef}
+body[data-ui-theme="slate"] .status-pill.due{background:#55372c;color:#ffd4bd}
+body[data-ui-theme="slate"] .empty{background:#1c2026;border-color:#3b424d}
+body[data-ui-theme="slate"] input,
+body[data-ui-theme="slate"] select,
+body[data-ui-theme="slate"] textarea{background:#1b1f25;color:var(--ink);border-color:var(--line)}
+body[data-ui-theme="slate"] dialog{background:#22262d;color:var(--ink)}
+body[data-ui-theme="slate"] dialog::backdrop{background:rgba(0,0,0,.72)}
+
+/* COMPACT DESK ----------------------------------------------------------- */
+body[data-ui-theme="compact"]{
+  --bg:#eceff1;
+  --surface:#ffffff;
+  --surface-2:#e3e7e9;
+  --ink:#263238;
+  --muted:#66757d;
+  --line:#cbd2d6;
+  --olive:#496a75;
+  --olive-dark:#385761;
+  --rust:#a85e36;
+  --danger:#a33d36;
+  --shadow:0 1px 3px rgba(38,50,56,.10);
+  --radius:6px;
+}
+body[data-ui-theme="compact"] .topbar{padding-top:15px;padding-bottom:15px;background:#263238}
+body[data-ui-theme="compact"] .topbar h1{font-size:1.45rem}
+body[data-ui-theme="compact"] .shell{padding-top:18px}
+body[data-ui-theme="compact"] .stats{gap:8px;margin-bottom:14px}
+body[data-ui-theme="compact"] .stat-card{padding:11px 13px;border-radius:6px;box-shadow:none}
+body[data-ui-theme="compact"] .stat-card strong{font-size:1.45rem;margin-top:1px}
+body[data-ui-theme="compact"] .toolbar{gap:7px;margin-bottom:18px}
+body[data-ui-theme="compact"] .cards{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+body[data-ui-theme="compact"] .customer-card{border-radius:6px;box-shadow:none}
+body[data-ui-theme="compact"] .card-main{padding:12px}
+body[data-ui-theme="compact"] .card-title{font-size:1rem}
+body[data-ui-theme="compact"] .card-meta{margin-top:10px;gap:5px;font-size:.8rem}
+body[data-ui-theme="compact"] .meta-row{grid-template-columns:96px 1fr;gap:6px}
+body[data-ui-theme="compact"] .next-action,
+body[data-ui-theme="compact"] .latest-interaction{margin-top:9px;padding:8px;border-radius:5px;font-size:.8rem}
+body[data-ui-theme="compact"] .card-footer{padding:6px 9px;gap:4px}
+body[data-ui-theme="compact"] .card-footer button{font-size:.78rem;padding:4px 5px}
+body[data-ui-theme="compact"] .primary,
+body[data-ui-theme="compact"] .secondary,
+body[data-ui-theme="compact"] .link-button{border-radius:5px;padding:8px 11px}
+body[data-ui-theme="compact"] input,
+body[data-ui-theme="compact"] select,
+body[data-ui-theme="compact"] textarea{border-radius:5px;padding:9px 10px}
+body[data-ui-theme="compact"] dialog{border-radius:8px}
+body[data-ui-theme="compact"] .summary-item,
+body[data-ui-theme="compact"] .timeline-item,
+body[data-ui-theme="compact"] .user-card{border-radius:6px}
+@media(max-width:1180px){body[data-ui-theme="compact"] .cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){body[data-ui-theme="compact"] .cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){body[data-ui-theme="compact"] .cards{grid-template-columns:1fr}}
