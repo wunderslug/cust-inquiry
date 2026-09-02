@@ -1,9 +1,61 @@
 // Small UI enhancements kept separate from the core CRM logic.
-// Adds Date Created behavior, grouped-card sorting, and a wider desktop workspace.
+// Adds Date Created behavior, grouped-card sorting, theme switching, and a wider desktop workspace.
 
 const DEFAULT_SORT_MODE = 'created-newest';
 const SORT_STORAGE_KEY = 'crm.sortMode';
 let sortMode = localStorage.getItem(SORT_STORAGE_KEY) || DEFAULT_SORT_MODE;
+
+const DEFAULT_UI_THEME = 'workshop';
+const THEME_STORAGE_KEY = 'crm.uiTheme';
+const UI_THEMES = [
+  ['workshop', 'Workshop'],
+  ['material', 'Material'],
+  ['slate', 'Slate Dark'],
+  ['compact', 'Compact Desk']
+];
+
+function loadThemeStyles() {
+  if (document.querySelector('link[data-crm-themes]')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = '/themes.css?v=20260902-theme1';
+  link.dataset.crmThemes = '1';
+  document.head.appendChild(link);
+}
+
+function applyUiTheme(theme) {
+  const valid = UI_THEMES.some(([value]) => value === theme);
+  const nextTheme = valid ? theme : DEFAULT_UI_THEME;
+  document.body.dataset.uiTheme = nextTheme;
+  localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  const selector = el('themeSwitcher');
+  if (selector) selector.value = nextTheme;
+}
+
+function ensureThemeControl() {
+  loadThemeStyles();
+  if (el('themeSwitcher')) return;
+
+  const actions = document.querySelector('.topbar-actions');
+  const manageUsers = el('manageUsersBtn');
+  if (!actions) return;
+
+  const select = document.createElement('select');
+  select.id = 'themeSwitcher';
+  select.className = 'theme-switcher';
+  select.setAttribute('aria-label', 'Interface theme');
+  select.innerHTML = UI_THEMES
+    .map(([value, label]) => `<option value="${value}">${label}</option>`)
+    .join('');
+
+  if (manageUsers) actions.insertBefore(select, manageUsers);
+  else actions.prepend(select);
+
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || DEFAULT_UI_THEME;
+  applyUiTheme(savedTheme);
+
+  select.addEventListener('change', () => applyUiTheme(select.value));
+}
 
 function dateInputValue(value) {
   if (!value) return todayLocal();
@@ -174,6 +226,7 @@ customerAccordion = function(key, records) {
   return coreCustomerAccordion(key, records).replace(oldMarkup, newMarkup);
 };
 
+ensureThemeControl();
 ensureCreatedDateField();
 ensureSortControl();
 syncToolbarColumns();
