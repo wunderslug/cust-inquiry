@@ -1,5 +1,6 @@
 // Small UI enhancements kept separate from the core CRM logic.
-// Adds Date Created behavior, grouped-card sorting, theme switching, and a wider desktop workspace.
+// Adds Date Created behavior, grouped-card sorting, theme switching,
+// status color semantics, and a wider desktop workspace.
 
 const DEFAULT_SORT_MODE = 'created-newest';
 const SORT_STORAGE_KEY = 'crm.sortMode';
@@ -18,7 +19,7 @@ function loadThemeStyles() {
   if (document.querySelector('link[data-crm-themes]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = '/themes.css?v=20260902-theme1';
+  link.href = '/themes.css?v=20260902-dashboard2';
   link.dataset.crmThemes = '1';
   document.head.appendChild(link);
 }
@@ -201,7 +202,7 @@ function syncToolbarColumns() {
   const toolbar = document.querySelector('.toolbar');
   if (!toolbar) return;
   toolbar.style.gridTemplateColumns = window.innerWidth > 900
-    ? 'minmax(260px,1fr) 190px 190px auto auto'
+    ? 'minmax(340px,1fr) 190px 190px auto auto'
     : '';
 }
 
@@ -217,14 +218,80 @@ function widenDesktopWorkspace() {
   document.head.appendChild(style);
 }
 
+function statusTone(status='') {
+  const normalized = String(status).trim().toLowerCase();
+  const tones = {
+    'new inquiry':'new',
+    'quote needed':'quote-needed',
+    'quote sent':'quote-sent',
+    'waiting on customer':'waiting-customer',
+    'ordered':'ordered',
+    'waiting on vendor':'waiting-vendor',
+    'ready':'ready',
+    'complete':'complete',
+    'lost / cancelled':'lost'
+  };
+  return tones[normalized] || 'new';
+}
+
+function statusMarkup(status, due=false) {
+  const safeStatus = status || 'New Inquiry';
+  return `
+    <div class="status-stack">
+      <span class="status-pill status-${statusTone(safeStatus)}">${escapeHtml(safeStatus)}</span>
+      ${due ? '<span class="attention-pill">Follow-up due</span>' : ''}
+    </div>
+  `;
+}
+
+function replacePrimaryStatusPill(markup, status, due=false) {
+  const pillPattern = /<span class="status-pill[^\"]*">[^<]*<\/span>/;
+  return markup.replace(pillPattern, statusMarkup(status, due));
+}
+
+const coreCustomerCardStatus = customerCard;
+customerCard = function(customer) {
+  return replacePrimaryStatusPill(
+    coreCustomerCardStatus(customer),
+    customer.status || 'New Inquiry',
+    isDue(customer)
+  );
+};
+
+const coreInquiryBlockStatus = inquiryBlock;
+inquiryBlock = function(customer) {
+  return replacePrimaryStatusPill(
+    coreInquiryBlockStatus(customer),
+    customer.status || 'New Inquiry',
+    isDue(customer)
+  );
+};
+
 const coreCustomerAccordion = customerAccordion;
 customerAccordion = function(key, records) {
   const latestRecord = [...records].sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))[0];
-  const due = records.some(isDue);
-  const oldMarkup = `<span class="status-pill ${due ? 'due' : ''}">${escapeHtml(due ? 'Follow up' : 'History')}</span>`;
-  const newMarkup = `<span class="status-pill ${due ? 'due' : ''}">${escapeHtml(latestRecord.status || 'New Inquiry')}</span>`;
-  return coreCustomerAccordion(key, records).replace(oldMarkup, newMarkup);
+  return replacePrimaryStatusPill(
+    coreCustomerAccordion(key, records),
+    latestRecord.status || 'New Inquiry',
+    records.some(isDue)
+  );
 };
+
+function syncDetailStatusTone(status) {
+  const select = el('detailStatusSelect');
+  if (!select) return;
+  select.dataset.statusTone = statusTone(status || select.value);
+}
+
+const coreOpenDetailStatusTone = openDetail;
+openDetail = function(customer, focusInteraction=false) {
+  coreOpenDetailStatusTone(customer, focusInteraction);
+  syncDetailStatusTone(customer?.status);
+};
+
+el('detailStatusSelect')?.addEventListener('change', event => {
+  syncDetailStatusTone(event.target.value);
+});
 
 ensureThemeControl();
 ensureCreatedDateField();
