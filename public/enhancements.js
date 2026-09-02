@@ -1,7 +1,9 @@
 // Small UI enhancements kept separate from the core CRM logic.
 // Adds Date Created behavior, grouped-card sorting, and a wider desktop workspace.
 
-let sortMode = 'attention';
+const DEFAULT_SORT_MODE = 'created-newest';
+const SORT_STORAGE_KEY = 'crm.sortMode';
+let sortMode = localStorage.getItem(SORT_STORAGE_KEY) || DEFAULT_SORT_MODE;
 
 function dateInputValue(value) {
   if (!value) return todayLocal();
@@ -129,10 +131,16 @@ function ensureSortControl() {
     <option value="created-newest">Newest inquiry</option>
     <option value="created-oldest">Oldest inquiry</option>
   `;
+
+  if (![...sort.options].some(option => option.value === sortMode)) {
+    sortMode = DEFAULT_SORT_MODE;
+  }
+  sort.value = sortMode;
   statusFilter.insertAdjacentElement('afterend', sort);
 
   sort.addEventListener('change', () => {
     sortMode = sort.value;
+    localStorage.setItem(SORT_STORAGE_KEY, sortMode);
     render();
   });
 }
