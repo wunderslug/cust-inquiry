@@ -1,6 +1,5 @@
 // Small UI enhancements kept separate from the core CRM logic.
-// Adds Date Created behavior, grouped-card sorting, a wider desktop workspace,
-// and status changes as part of the interaction workflow.
+// Adds Date Created behavior, grouped-card sorting, and a wider desktop workspace.
 
 let sortMode = 'attention';
 
@@ -158,144 +157,6 @@ function widenDesktopWorkspace() {
   document.head.appendChild(style);
 }
 
-const WORKFLOW_STATUSES = [
-  'New Inquiry',
-  'Quote Needed',
-  'Quote Sent',
-  'Waiting on Customer',
-  'Ordered',
-  'Waiting on Vendor',
-  'Ready',
-  'Complete',
-  'Lost / Cancelled'
-];
-
-function hideCustomerStatusField() {
-  const statusWrap = el('status')?.closest('label');
-  if (statusWrap) statusWrap.classList.add('hidden');
-}
-
-function ensureInteractionStatusControl() {
-  if (el('interactionStatus')) return;
-
-  const form = el('interactionForm');
-  const type = el('interactionType');
-  if (!form || !type) return;
-
-  form.classList.add('workflow-status-form');
-  const label = document.createElement('label');
-  label.className = 'interaction-status-field';
-  label.innerHTML = `
-    <span>Status</span>
-    <select id="interactionStatus">
-      ${WORKFLOW_STATUSES.map(status => `<option>${status}</option>`).join('')}
-    </select>
-  `;
-  form.insertBefore(label, type);
-
-  const style = document.createElement('style');
-  style.textContent = `
-    .interaction-form.workflow-status-form{grid-template-columns:180px 150px minmax(220px,1fr) auto}
-    .interaction-status-field{display:grid;gap:5px;color:var(--muted);font-size:.72rem;font-weight:800}
-    .interaction-status-field span{text-transform:uppercase;letter-spacing:.08em}
-    @media(max-width:900px){
-      .interaction-form.workflow-status-form{grid-template-columns:1fr 1fr}
-      .interaction-form.workflow-status-form textarea{grid-column:1/-1}
-    }
-    @media(max-width:640px){
-      .interaction-form.workflow-status-form{grid-template-columns:1fr}
-      .interaction-form.workflow-status-form textarea{grid-column:auto}
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-const coreOpenDetail = openDetail;
-openDetail = function(customer, focusInteraction=false) {
-  coreOpenDetail(customer, focusInteraction);
-  ensureInteractionStatusControl();
-  if (el('interactionStatus')) el('interactionStatus').value = customer.status || 'New Inquiry';
-};
-
-function customerPayloadWithStatus(customer, status) {
-  return {
-    company: customer.company || '',
-    contact: customer.contact || '',
-    phone: customer.phone || '',
-    email: customer.email || '',
-    quoteOrder: customer.quoteOrder || '',
-    status: status || customer.status || 'New Inquiry',
-    nextFollowUp: customer.nextFollowUp || '',
-    nextAction: customer.nextAction || '',
-    notes: customer.notes || ''
-  };
-}
-
-function installInteractionWorkflowSubmit() {
-  const form = el('interactionForm');
-  if (!form || form.dataset.workflowSubmitInstalled === '1') return;
-  form.dataset.workflowSubmitInstalled = '1';
-
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-
-    const customerId = editingInteractionCustomerId || selectedCustomerId;
-    const customer = customers.find(item => item.id === customerId);
-    if (!customer) return;
-
-    const payload = {
-      type: el('interactionType').value,
-      summary: el('interactionSummary').value
-    };
-    const nextStatus = el('interactionStatus')?.value || customer.status || 'New Inquiry';
-    const submitButton = el('interactionSubmitBtn');
-    const wasEditing = Boolean(editingInteractionId);
-
-    try {
-      submitButton.disabled = true;
-
-      if (editingInteractionId) {
-        if (el('interactionHappenedAt').value) {
-          const parsed = new Date(el('interactionHappenedAt').value);
-          if (Number.isNaN(parsed.getTime())) throw new Error('Please enter a valid interaction date and time.');
-          payload.happenedAt = parsed.toISOString();
-        }
-        await api(`/api/customers/${customerId}/interactions/${editingInteractionId}`, {
-          method:'PUT',
-          body:JSON.stringify(payload)
-        });
-      } else {
-        payload.happenedAt = new Date().toISOString();
-        await api(`/api/customers/${customerId}/interactions`, {
-          method:'POST',
-          body:JSON.stringify(payload)
-        });
-      }
-
-      if (nextStatus !== customer.status) {
-        await api(`/api/customers/${customerId}`, {
-          method:'PUT',
-          body:JSON.stringify(customerPayloadWithStatus(customer, nextStatus))
-        });
-      }
-
-      resetInteractionForm();
-      await loadCustomers();
-      const fresh = customers.find(item => item.id === customerId);
-      if (fresh) {
-        if (detailDialog.open) detailDialog.close();
-        openDetail(fresh);
-      }
-      toast(wasEditing ? 'Interaction updated' : 'Interaction logged');
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      submitButton.disabled = false;
-    }
-  }, true);
-}
-
 const coreCustomerAccordion = customerAccordion;
 customerAccordion = function(key, records) {
   const latestRecord = [...records].sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))[0];
@@ -309,7 +170,4 @@ ensureCreatedDateField();
 ensureSortControl();
 syncToolbarColumns();
 widenDesktopWorkspace();
-hideCustomerStatusField();
-ensureInteractionStatusControl();
-installInteractionWorkflowSubmit();
 window.addEventListener('resize', syncToolbarColumns);
