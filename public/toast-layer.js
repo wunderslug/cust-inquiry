@@ -29,6 +29,22 @@ toastLayerStyle.textContent = `
     color:#bde7e1;
     border-color:#3e6c67;
   }
+
+  .status-pill.status-delivery {
+    background:#e4edf8;
+    color:#315b86;
+  }
+  .status-select[data-status-tone="delivery"] {
+    background:#e4edf8;
+    color:#315b86;
+    border-color:#adc2dc;
+  }
+  body[data-ui-theme="slate"] .status-pill.status-delivery,
+  body[data-ui-theme="slate"] .status-select[data-status-tone="delivery"] {
+    background:#2b3f55;
+    color:#c8daee;
+    border-color:#506b87;
+  }
 `;
 document.head.appendChild(toastLayerStyle);
 
@@ -68,27 +84,34 @@ toast = function(message) {
   }, 1800);
 };
 
-// Additional workflow status: Ordered -> Sent to Purchasing -> Waiting on Vendor.
-(function installSentToPurchasingStatus() {
-  const STATUS = 'Sent to Purchasing';
+// Additional workflow statuses layered onto the core CRM status lists.
+(function installAdditionalStatuses() {
+  const statuses = [
+    { label: 'Sent to Purchasing', after: 'Ordered', tone: 'purchasing' },
+    { label: 'Scheduled for Delivery', after: 'Ready', tone: 'delivery' }
+  ];
 
-  function addOption(select) {
-    if (!select || [...select.options].some(option => option.value === STATUS)) return;
+  function addOption(select, status) {
+    if (!select || [...select.options].some(option => option.value === status.label)) return;
     const option = document.createElement('option');
-    option.value = STATUS;
-    option.textContent = STATUS;
-    const ordered = [...select.options].find(existing => existing.value === 'Ordered');
-    if (ordered) ordered.insertAdjacentElement('afterend', option);
+    option.value = status.label;
+    option.textContent = status.label;
+    const anchor = [...select.options].find(existing => existing.value === status.after);
+    if (anchor) anchor.insertAdjacentElement('afterend', option);
     else select.appendChild(option);
   }
 
-  addOption(el('statusFilter'));
-  addOption(el('detailStatusSelect'));
+  for (const status of statuses) {
+    addOption(el('statusFilter'), status);
+    addOption(el('detailStatusSelect'), status);
+  }
 
   if (typeof statusTone === 'function') {
     const coreStatusTone = statusTone;
     statusTone = function(status='') {
-      if (String(status).trim().toLowerCase() === 'sent to purchasing') return 'purchasing';
+      const normalized = String(status).trim().toLowerCase();
+      if (normalized === 'sent to purchasing') return 'purchasing';
+      if (normalized === 'scheduled for delivery') return 'delivery';
       return coreStatusTone(status);
     };
   }
