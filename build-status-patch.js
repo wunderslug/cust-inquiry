@@ -1,14 +1,28 @@
-// Build-time patch for the current Node backend status whitelist.
-// Keeps the deployed server behavior unchanged except for adding this workflow status.
+// Build-time patch for additional workflow statuses in the deployed Node backend.
+// Keeps the deployed server behavior unchanged except for extending STATUS_OPTIONS.
 
 const fs = require('fs');
 const file = './server.js';
-const marker = "  'Ordered',\n  'Waiting on Vendor',";
-const replacement = "  'Ordered',\n  'Sent to Purchasing',\n  'Waiting on Vendor',";
+let source = fs.readFileSync(file, 'utf8');
 
-const source = fs.readFileSync(file, 'utf8');
-if (source.includes("'Sent to Purchasing'")) process.exit(0);
-if (!source.includes(marker)) {
-  throw new Error('Could not find STATUS_OPTIONS insertion point in server.js');
+function insertStatus(status, marker, replacement) {
+  if (source.includes(`'${status}'`)) return;
+  if (!source.includes(marker)) {
+    throw new Error(`Could not find STATUS_OPTIONS insertion point for ${status} in server.js`);
+  }
+  source = source.replace(marker, replacement);
 }
-fs.writeFileSync(file, source.replace(marker, replacement));
+
+insertStatus(
+  'Sent to Purchasing',
+  "  'Ordered',\n  'Waiting on Vendor',",
+  "  'Ordered',\n  'Sent to Purchasing',\n  'Waiting on Vendor',"
+);
+
+insertStatus(
+  'Scheduled for Delivery',
+  "  'Ready',\n  'Complete',",
+  "  'Ready',\n  'Scheduled for Delivery',\n  'Complete',"
+);
+
+fs.writeFileSync(file, source);
