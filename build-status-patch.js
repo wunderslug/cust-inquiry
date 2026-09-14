@@ -20,6 +20,12 @@ insertStatus(
 );
 
 insertStatus(
+  'Sent to Install Team',
+  "  'Sent to Purchasing',\n  'Waiting on Vendor',",
+  "  'Sent to Purchasing',\n  'Sent to Install Team',\n  'Waiting on Vendor',"
+);
+
+insertStatus(
   'Scheduled for Delivery',
   "  'Ready',\n  'Complete',",
   "  'Ready',\n  'Scheduled for Delivery',\n  'Complete',"
