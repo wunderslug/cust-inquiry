@@ -30,6 +30,22 @@ toastLayerStyle.textContent = `
     border-color:#3e6c67;
   }
 
+  .status-pill.status-install-team {
+    background:#ebe8f8;
+    color:#514f8d;
+  }
+  .status-select[data-status-tone="install-team"] {
+    background:#ebe8f8;
+    color:#514f8d;
+    border-color:#bbb6df;
+  }
+  body[data-ui-theme="slate"] .status-pill.status-install-team,
+  body[data-ui-theme="slate"] .status-select[data-status-tone="install-team"] {
+    background:#353451;
+    color:#d7d2f2;
+    border-color:#5b5981;
+  }
+
   .status-pill.status-delivery {
     background:#e4edf8;
     color:#315b86;
@@ -88,6 +104,7 @@ toast = function(message) {
 (function installAdditionalStatuses() {
   const statuses = [
     { label: 'Sent to Purchasing', after: 'Ordered', tone: 'purchasing' },
+    { label: 'Sent to Install Team', after: 'Sent to Purchasing', tone: 'install-team' },
     { label: 'Scheduled for Delivery', after: 'Ready', tone: 'delivery' }
   ];
 
@@ -111,6 +128,7 @@ toast = function(message) {
     statusTone = function(status='') {
       const normalized = String(status).trim().toLowerCase();
       if (normalized === 'sent to purchasing') return 'purchasing';
+      if (normalized === 'sent to install team') return 'install-team';
       if (normalized === 'scheduled for delivery') return 'delivery';
       return coreStatusTone(status);
     };
