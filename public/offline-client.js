@@ -262,6 +262,7 @@ async function registerCrmOfflineWorker() {
     const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
     await registration.update();
     await navigator.serviceWorker.ready;
+    await sendOfflineWorkerMessage('PRIME_CACHE');
 
     navigator.serviceWorker.addEventListener('message', event => {
       const message = event.data || {};
