@@ -66,6 +66,14 @@ self.addEventListener('message', event => {
     return;
   }
 
+  if (message.type === 'PRIME_CACHE') {
+    event.waitUntil((async () => {
+      const result = await primeOfflineCache();
+      reply(result);
+    })().catch(error => reply({ ok: false, error: error.message })));
+    return;
+  }
+
   if (message.type === 'GET_STATUS') {
     event.waitUntil((async () => {
       const [pending, offlineActive, latestBackup] = await Promise.all([
@@ -91,6 +99,27 @@ self.addEventListener('message', event => {
 self.addEventListener('sync', event => {
   if (event.tag === 'crm-sync') event.waitUntil(drainQueue());
 });
+
+async function primeOfflineCache() {
+  const origin = self.location.origin;
+  const sessionResponse = await networkFirstSession(new Request(new URL('/api/session', origin), {
+    cache: 'no-store',
+    credentials: 'same-origin'
+  }));
+  if (!sessionResponse.ok) return { ok: false, error: 'Could not cache session.' };
+  const session = await sessionResponse.clone().json().catch(() => ({}));
+  if (!session.authenticated) return { ok: true, authenticated: false };
+
+  await networkFirstViewUsers(new Request(new URL('/api/view-users', origin), {
+    cache: 'no-store',
+    credentials: 'same-origin'
+  }));
+  const customersResponse = await networkFirstCustomers(new Request(new URL('/api/customers', origin), {
+    cache: 'no-store',
+    credentials: 'same-origin'
+  }));
+  return { ok: customersResponse.ok, authenticated: true };
+}
 
 async function handleAssetRequest(request) {
   try {
