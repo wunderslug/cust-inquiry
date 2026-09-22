@@ -259,7 +259,8 @@ async function downloadOfflineBackup() {
 async function registerCrmOfflineWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+    await registration.update();
     await navigator.serviceWorker.ready;
 
     navigator.serviceWorker.addEventListener('message', event => {
