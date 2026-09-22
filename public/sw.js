@@ -3,6 +3,7 @@ const DB_NAME = 'lumber-crm-offline-v1';
 const DB_VERSION = 1;
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const OFFLINE_STATUSES = new Set([502, 503, 504]);
+let syncInFlight = null;
 
 const SHELL_ASSETS = [
   '/',
@@ -79,8 +80,10 @@ self.addEventListener('message', event => {
 
   if (message.type === 'DOWNLOAD_BACKUP') {
     event.waitUntil((async () => {
-      const backup = await createEmergencyBackup('manual-download');
-      reply({ ok: true, backup });
+      const backup = await buildEmergencyBackupPayload('manual-download');
+      const id = await addBackup(backup);
+      await trimBackups(20);
+      reply({ ok: true, backup: { ...backup, id } });
     })().catch(error => reply({ ok: false, error: error.message })));
   }
 });
@@ -452,6 +455,12 @@ async function queueAndApplyCrmWrite(request) {
 }
 
 async function drainQueue() {
+  if (syncInFlight) return syncInFlight;
+  syncInFlight = drainQueueInternal().finally(() => { syncInFlight = null; });
+  return syncInFlight;
+}
+
+async function drainQueueInternal() {
   const pending = await getQueueItems();
   if (!pending.length) {
     await markNetworkOnline();
@@ -543,14 +552,14 @@ async function markNetworkOnline() {
   }
 }
 
-async function createEmergencyBackup(reason) {
+async function buildEmergencyBackupPayload(reason) {
   const [session, viewContext, datasets, queue] = await Promise.all([
     getMeta('session'),
     getMeta('viewContext'),
     getAllDatasets(),
     getQueueItems()
   ]);
-  const backup = {
+  return {
     createdAt: new Date().toISOString(),
     reason,
     session: session?.data || null,
@@ -558,6 +567,10 @@ async function createEmergencyBackup(reason) {
     datasets: datasets.map(entry => ({ ownerId: entry.key, data: entry.value })),
     pendingChanges: queue.map(({ id, ...item }) => item)
   };
+}
+
+async function createEmergencyBackup(reason) {
+  const backup = await buildEmergencyBackupPayload(reason);
   const id = await addBackup(backup);
   await trimBackups(20);
   return { id, createdAt: backup.createdAt, reason };
