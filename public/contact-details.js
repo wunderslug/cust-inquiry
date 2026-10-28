@@ -80,12 +80,14 @@ function orderSubject(customer) {
 
 function compactOrderRow(customer) {
   const created = customer.createdAt ? formatDate(customer.createdAt) : '';
+  const expectedDelivery = currentExpectedDelivery(customer);
   return `
     <button type="button" class="order-picker-row" data-open="${escapeHtml(customer.id)}" aria-label="Open ${escapeHtml(orderNumberLabel(customer))}">
       <span class="order-picker-main">
         <span class="order-picker-number">${escapeHtml(orderNumberLabel(customer))}</span>
         <span class="order-picker-subject">${escapeHtml(orderSubject(customer))}</span>
         ${created ? `<span class="order-picker-date">Created ${created}</span>` : ''}
+        ${expectedDelivery ? `<span class="order-picker-date">Expected delivery ${formatDate(expectedDelivery)}</span>` : ''}
       </span>
       <span class="order-picker-status">${statusMarkup(customer.status || 'New Inquiry', isDue(customer))}</span>
       <span class="order-picker-chevron" aria-hidden="true">›</span>
