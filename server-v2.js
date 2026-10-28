@@ -123,6 +123,12 @@ function cleanString(value, max = 5000) {
   return String(value).trim().slice(0, max);
 }
 
+function cleanDate(value, fallback = '') {
+  const cleaned = cleanString(value, 10);
+  if (!cleaned) return '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(cleaned) ? cleaned : fallback;
+}
+
 function normalizeUsername(value) {
   return cleanString(value, 50).toLowerCase();
 }
@@ -321,6 +327,7 @@ function interactionFromPayload(body, actor) {
     id: crypto.randomUUID(),
     type,
     summary: cleanString(body.summary, 2000),
+    expectedDeliveryDate: cleanDate(body.expectedDeliveryDate),
     happenedAt,
     createdAt: new Date().toISOString(),
     createdBy: actor.id,
@@ -335,6 +342,9 @@ function updateInteractionFromPayload(body, existing, actor) {
     ...existing,
     type,
     summary: cleanString(body.summary, 2000),
+    expectedDeliveryDate: body.expectedDeliveryDate === undefined
+      ? (existing.expectedDeliveryDate || '')
+      : cleanDate(body.expectedDeliveryDate),
     happenedAt: cleanString(body.happenedAt, 40) || existing.happenedAt,
     updatedAt: new Date().toISOString(),
     updatedBy: actor.id
