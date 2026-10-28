@@ -117,6 +117,15 @@ function groupLastInteraction(records) {
   return values.length ? values[values.length - 1] : '';
 }
 
+function groupExpectedDelivery(records, pick='min') {
+  const values = records
+    .map(record => currentExpectedDelivery(record))
+    .filter(Boolean)
+    .sort();
+  if (!values.length) return '';
+  return pick === 'max' ? values[values.length - 1] : values[0];
+}
+
 function compareOptional(a, b, direction='asc') {
   if (!a && !b) return 0;
   if (!a) return 1;
@@ -145,6 +154,10 @@ function sortCustomerGroups(groups) {
         return compareOptional(groupLastInteraction(a.records), groupLastInteraction(b.records), 'desc');
       case 'interaction-oldest':
         return compareOptional(groupLastInteraction(a.records), groupLastInteraction(b.records), 'asc');
+      case 'delivery-soonest':
+        return compareOptional(groupExpectedDelivery(a.records, 'min'), groupExpectedDelivery(b.records, 'min'), 'asc');
+      case 'delivery-latest':
+        return compareOptional(groupExpectedDelivery(a.records, 'max'), groupExpectedDelivery(b.records, 'max'), 'desc');
       case 'customer-az':
         return groupName(a).localeCompare(groupName(b));
       case 'customer-za':
@@ -179,6 +192,8 @@ function ensureSortControl() {
     <option value="followup-latest">Next follow-up — latest</option>
     <option value="interaction-newest">Last interaction — newest</option>
     <option value="interaction-oldest">Last interaction — oldest</option>
+    <option value="delivery-soonest">Expected delivery — soonest</option>
+    <option value="delivery-latest">Expected delivery — latest</option>
     <option value="customer-az">Customer A–Z</option>
     <option value="customer-za">Customer Z–A</option>
     <option value="created-newest">Newest inquiry</option>
