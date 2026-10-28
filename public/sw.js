@@ -406,6 +406,9 @@ async function queueAndApplyCrmWrite(request) {
           ...existing,
           type: clean(body.type) || existing.type,
           summary: clean(body.summary),
+          expectedDeliveryDate: body.expectedDeliveryDate === undefined
+            ? (existing.expectedDeliveryDate || '')
+            : clean(body.expectedDeliveryDate),
           happenedAt: clean(body.happenedAt) || existing.happenedAt,
           updatedAt: now,
           updatedBy: ownerId
@@ -427,6 +430,7 @@ async function queueAndApplyCrmWrite(request) {
         id,
         type: clean(body.type) || 'Note',
         summary: clean(body.summary),
+        expectedDeliveryDate: clean(body.expectedDeliveryDate),
         happenedAt: clean(body.happenedAt) || now,
         createdAt: now,
         createdBy: ownerId,
