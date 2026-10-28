@@ -294,6 +294,7 @@ const READ_ONLY_FORM_CONTROL_SELECTOR = [
   '#detailStatusSelect',
   '#interactionType',
   '#interactionSummary',
+  '#interactionExpectedDeliveryDate',
   '#interactionHappenedAt'
 ].join(',');
 
