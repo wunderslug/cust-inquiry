@@ -58,12 +58,24 @@ function toDateTimeLocal(value) {
 function searchableText(c) {
   return [
     c.company,c.contact,c.phone,c.email,c.quoteOrder,c.status,c.nextAction,c.notes,
-    ...(c.interactions || []).flatMap(i => [i.type,i.summary])
+    ...(c.interactions || []).flatMap(i => [i.type,i.summary,i.expectedDeliveryDate])
   ].join(' ').toLowerCase();
 }
 
 function customerKey(c) {
   return String(c.company || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function currentExpectedDelivery(c) {
+  const dated = (c?.interactions || [])
+    .filter(i => i.expectedDeliveryDate)
+    .slice()
+    .sort((a, b) => {
+      const aWhen = a.happenedAt || a.createdAt || '';
+      const bWhen = b.happenedAt || b.createdAt || '';
+      return bWhen.localeCompare(aWhen);
+    });
+  return dated[0]?.expectedDeliveryDate || '';
 }
 
 async function api(url, options={}) {
@@ -181,6 +193,7 @@ function timelineItem(customerId, i) {
       </div>
       <div>
         <div class="timeline-text">${escapeHtml(i.summary)}</div>
+        ${i.expectedDeliveryDate ? `<div class="timeline-delivery">Expected delivery: ${formatDate(i.expectedDeliveryDate)}</div>` : ''}
         <div class="timeline-actions">
           <button type="button" class="mini-action" data-edit-interaction="${escapeHtml(i.id)}" data-customer-id="${escapeHtml(customerId)}">Edit</button>
           <button type="button" class="mini-action danger" data-delete-interaction="${escapeHtml(i.id)}" data-customer-id="${escapeHtml(customerId)}">Delete</button>
@@ -206,6 +219,7 @@ function customerCard(c) {
         <div class="card-meta">
           <div class="meta-row"><span class="meta-label">Quote / Order</span><strong>${escapeHtml(c.quoteOrder || '—')}</strong></div>
           <div class="meta-row"><span class="meta-label">Next follow-up</span><strong>${formatDate(c.nextFollowUp)}</strong></div>
+          <div class="meta-row"><span class="meta-label">Expected delivery</span><strong>${formatDate(currentExpectedDelivery(c))}</strong></div>
           <div class="meta-row"><span class="meta-label">Last contact</span><strong>${latest ? formatDateTime(latest.happenedAt) : '—'}</strong></div>
         </div>
         ${latest ? `
@@ -243,6 +257,7 @@ function inquiryBlock(c) {
         <div class="card-meta">
           <div class="meta-row"><span class="meta-label">Quote / Order</span><strong>${escapeHtml(c.quoteOrder || '—')}</strong></div>
           <div class="meta-row"><span class="meta-label">Next follow-up</span><strong>${formatDate(c.nextFollowUp)}</strong></div>
+          <div class="meta-row"><span class="meta-label">Expected delivery</span><strong>${formatDate(currentExpectedDelivery(c))}</strong></div>
         </div>
 
         ${interactions.length ? `
@@ -351,6 +366,7 @@ function resetInteractionForm() {
   editingInteractionCustomerId = null;
   el('interactionType').value = 'Call';
   el('interactionSummary').value = '';
+  el('interactionExpectedDeliveryDate').value = '';
   el('interactionHappenedAt').value = '';
   el('interactionHappenedAt').classList.add('hidden');
   el('cancelInteractionEdit').classList.add('hidden');
@@ -362,6 +378,7 @@ function setInteractionEditMode(c, interaction) {
   editingInteractionCustomerId = c.id;
   el('interactionType').value = interaction.type || 'Note';
   el('interactionSummary').value = interaction.summary || '';
+  el('interactionExpectedDeliveryDate').value = interaction.expectedDeliveryDate || '';
   el('interactionHappenedAt').value = toDateTimeLocal(interaction.happenedAt);
   el('interactionHappenedAt').classList.remove('hidden');
   el('cancelInteractionEdit').classList.remove('hidden');
@@ -379,6 +396,7 @@ function openDetail(c, focusInteraction=false) {
   el('detailSummary').innerHTML = [
     summaryItem('Quote / Order #', c.quoteOrder),
     summaryItem('Next follow-up', c.nextFollowUp ? formatDate(c.nextFollowUp) : ''),
+    summaryItem('Expected delivery', currentExpectedDelivery(c) ? formatDate(currentExpectedDelivery(c)) : ''),
     summaryItem('Initial Interest', c.nextAction),
     summaryItem('Notes', c.notes)
   ].join('');
@@ -714,7 +732,8 @@ el('interactionForm').addEventListener('submit', async e => {
 
   const payload = {
     type: el('interactionType').value,
-    summary: el('interactionSummary').value
+    summary: el('interactionSummary').value,
+    expectedDeliveryDate: el('interactionExpectedDeliveryDate').value
   };
 
   try {
