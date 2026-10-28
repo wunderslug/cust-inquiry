@@ -211,6 +211,9 @@
               <option>Note</option>
             </select>
             <textarea id="interactionSummary" rows="2" placeholder="What happened?" required maxlength="2000"></textarea>
+            <label class="interaction-delivery-date">Expected delivery
+              <input id="interactionExpectedDeliveryDate" type="date">
+            </label>
             <input id="interactionHappenedAt" class="hidden" type="datetime-local">
             <button class="primary" type="submit" id="interactionSubmitBtn">Add interaction</button>
             <button class="secondary hidden" type="button" id="cancelInteractionEdit">Cancel edit</button>
@@ -254,11 +257,11 @@
     <div class="toast" id="toast" role="status"></div>
   </div>
 
-  <script src="/app.js?v=20260819-auth1"></script>
-  <script src="/enhancements.js?v=20260902-dashboard2"></script>
-  <script src="/contact-details.js?v=20260902-orderpicker1"></script>
+  <script src="/app.js?v=20261028-delivery1"></script>
+  <script src="/enhancements.js?v=20261028-delivery1"></script>
+  <script src="/contact-details.js?v=20261028-delivery1"></script>
   <script src="/toast-layer.js?v=20260914-status3"></script>
-  <script src="/read-only-view.js?v=20260903-readonly1"></script>
+  <script src="/read-only-view.js?v=20261028-delivery1"></script>
   <script src="/offline-client.js?v=20260921-offline1"></script>
   <script>if (currentUser) setTimeout(loadCrmViewUsers, 0);</script>
 </body>
